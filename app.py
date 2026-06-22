@@ -1,23 +1,12 @@
 from flask import Flask, render_template
 
-app = Flask(__name__)
+from recipes import RECIPES
 
-recipes = [
-    {
-        "id": 1,
-        "name": "Pizza",
-        "ingredients": "Cheese, Dough, Tomato Sauce"
-    },
-    {
-        "id": 2,
-        "name": "Burger",
-        "ingredients": "Bun, Patty, Cheese"
-    }
-]
+app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return render_template("index.html", recipes=recipes)
+    return render_template("index.html", recipes=RECIPES)
 
 if __name__ == "__main__":
     app.run(debug=True)
