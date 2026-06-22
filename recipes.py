@@ -5,6 +5,7 @@ RECIPES = [
         "ingredients": "Cheese, Dough, Tomato Sauce",
         "time": "35 min",
         "difficulty": "Medium",
+        "category": "Dinner",
     },
     {
         "id": 2,
@@ -12,6 +13,7 @@ RECIPES = [
         "ingredients": "Bun, Patty, Cheese",
         "time": "25 min",
         "difficulty": "Easy",
+        "category": "Lunch",
     },
     {
         "id": 3,
@@ -19,6 +21,7 @@ RECIPES = [
         "ingredients": "Pasta, Bell Pepper, Tomato, Garlic, Olive Oil",
         "time": "30 min",
         "difficulty": "Easy",
+        "category": "Dinner",
     },
     {
         "id": 4,
@@ -26,6 +29,7 @@ RECIPES = [
         "ingredients": "Chicken, Onion, Tomato, Ginger, Garlic, Spices",
         "time": "45 min",
         "difficulty": "Medium",
+        "category": "Dinner",
     },
     {
         "id": 5,
@@ -33,6 +37,7 @@ RECIPES = [
         "ingredients": "Apple, Banana, Grapes, Orange, Honey",
         "time": "10 min",
         "difficulty": "Easy",
+        "category": "Snack",
     },
     {
         "id": 6,
@@ -40,5 +45,6 @@ RECIPES = [
         "ingredients": "Flour, Milk, Egg, Sugar, Baking Powder",
         "time": "20 min",
         "difficulty": "Easy",
+        "category": "Breakfast",
     },
 ]
