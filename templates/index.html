@@ -10,24 +10,30 @@
 </head>
 <body>
 
-    <h1>Food Recipe Website</h1>
+    <main class="page">
+        <header class="page-header">
+            <p class="eyebrow">Fresh ideas for everyday cooking</p>
+            <h1>Food Recipe Website</h1>
+            <p class="intro">Browse quick, approachable meals with simple ingredients.</p>
+        </header>
 
-    <div class="recipe-container">
+        <section class="recipe-container" aria-label="Recipe list">
 
-        {% for recipe in recipes %}
+            {% for recipe in recipes %}
 
-        <div class="recipe-card">
-            <h2>{{ recipe.name }}</h2>
-            <div class="recipe-meta">
-                <span>{{ recipe.time }}</span>
-                <span>{{ recipe.difficulty }}</span>
+            <div class="recipe-card">
+                <h2>{{ recipe.name }}</h2>
+                <div class="recipe-meta">
+                    <span>{{ recipe.time }}</span>
+                    <span>{{ recipe.difficulty }}</span>
+                </div>
+                <p>{{ recipe.ingredients }}</p>
             </div>
-            <p>{{ recipe.ingredients }}</p>
-        </div>
 
-        {% endfor %}
+            {% endfor %}
 
-    </div>
+        </section>
+    </main>
 
 <script src="{{ url_for('static',
 filename='js/script.js') }}"></script>
