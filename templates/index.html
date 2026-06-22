@@ -17,15 +17,23 @@
             <p class="intro">Browse quick, approachable meals with simple ingredients.</p>
         </header>
 
+        <div class="filter-bar" aria-label="Filter recipes by category">
+            <button class="filter-button active" type="button" data-filter="all">All</button>
+            {% for category in categories %}
+            <button class="filter-button" type="button" data-filter="{{ category }}">{{ category }}</button>
+            {% endfor %}
+        </div>
+
         <section class="recipe-container" aria-label="Recipe list">
 
             {% for recipe in recipes %}
 
-            <div class="recipe-card">
+            <div class="recipe-card" data-category="{{ recipe.category }}">
                 <h2>{{ recipe.name }}</h2>
                 <div class="recipe-meta">
                     <span>{{ recipe.time }}</span>
                     <span>{{ recipe.difficulty }}</span>
+                    <span>{{ recipe.category }}</span>
                 </div>
                 <p>{{ recipe.ingredients }}</p>
             </div>

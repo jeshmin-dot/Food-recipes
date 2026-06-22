@@ -6,7 +6,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return render_template("index.html", recipes=RECIPES)
+    categories = sorted({recipe["category"] for recipe in RECIPES})
+    return render_template("index.html", recipes=RECIPES, categories=categories)
 
 if __name__ == "__main__":
     app.run(debug=True)

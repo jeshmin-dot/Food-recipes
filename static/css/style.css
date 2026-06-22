@@ -48,6 +48,33 @@ h1{
     gap: 20px;
 }
 
+.filter-bar{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.filter-button{
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #e4c8a6;
+    border-radius: 999px;
+    color: #6d361b;
+    background: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.filter-button:hover,
+.filter-button.active{
+    color: #ffffff;
+    background: #8c1d18;
+    border-color: #8c1d18;
+}
+
 .recipe-card{
     min-height: 190px;
     background: #ffffff;
