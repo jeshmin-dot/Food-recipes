@@ -6,6 +6,8 @@ RECIPES = [
         "time": "35 min",
         "difficulty": "Medium",
         "category": "Dinner",
+        "servings": 4,
+        "description": "A bubbly cheese pizza with a quick tomato base for weeknight cravings.",
     },
     {
         "id": 2,
@@ -14,6 +16,8 @@ RECIPES = [
         "time": "25 min",
         "difficulty": "Easy",
         "category": "Lunch",
+        "servings": 2,
+        "description": "A simple cheeseburger with a toasted bun and classic toppings.",
     },
     {
         "id": 3,
@@ -22,6 +26,8 @@ RECIPES = [
         "time": "30 min",
         "difficulty": "Easy",
         "category": "Dinner",
+        "servings": 3,
+        "description": "Colorful vegetable pasta tossed in garlic and olive oil.",
     },
     {
         "id": 4,
@@ -30,6 +36,8 @@ RECIPES = [
         "time": "45 min",
         "difficulty": "Medium",
         "category": "Dinner",
+        "servings": 4,
+        "description": "A warming chicken curry built with tomatoes, aromatics, and spices.",
     },
     {
         "id": 5,
@@ -38,6 +46,8 @@ RECIPES = [
         "time": "10 min",
         "difficulty": "Easy",
         "category": "Snack",
+        "servings": 2,
+        "description": "A bright fruit bowl finished with a light honey drizzle.",
     },
     {
         "id": 6,
@@ -46,5 +56,7 @@ RECIPES = [
         "time": "20 min",
         "difficulty": "Easy",
         "category": "Breakfast",
+        "servings": 3,
+        "description": "Fluffy breakfast pancakes that cook quickly on a griddle.",
     },
 ]

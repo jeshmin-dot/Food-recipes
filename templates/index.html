@@ -34,8 +34,10 @@
                     <span>{{ recipe.time }}</span>
                     <span>{{ recipe.difficulty }}</span>
                     <span>{{ recipe.category }}</span>
+                    <span>{{ recipe.servings }} servings</span>
                 </div>
-                <p>{{ recipe.ingredients }}</p>
+                <p>{{ recipe.description }}</p>
+                <p class="ingredients"><strong>Ingredients:</strong> {{ recipe.ingredients }}</p>
             </div>
 
             {% endfor %}

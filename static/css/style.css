@@ -96,6 +96,11 @@ h1{
     line-height: 1.55;
 }
 
+.recipe-card .ingredients{
+    color: #5e554d;
+    font-size: 0.95rem;
+}
+
 .recipe-meta{
     display: flex;
     flex-wrap: wrap;
