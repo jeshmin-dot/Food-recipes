@@ -75,6 +75,41 @@ h1{
     border-color: #8c1d18;
 }
 
+.search-panel{
+    display: grid;
+    gap: 8px;
+    max-width: 520px;
+    margin: 0 auto 24px;
+}
+
+.search-panel label{
+    color: #5e554d;
+    font-weight: 700;
+}
+
+.search-panel input{
+    min-height: 46px;
+    width: 100%;
+    border: 1px solid #e4c8a6;
+    border-radius: 8px;
+    padding: 0 14px;
+    color: #2d2a26;
+    background: #ffffff;
+    font: inherit;
+}
+
+.search-panel input:focus{
+    outline: 3px solid #f3c66e;
+    outline-offset: 2px;
+}
+
+.result-count{
+    margin: 0;
+    color: #6d361b;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
 .recipe-card{
     min-height: 190px;
     background: #ffffff;
@@ -113,5 +148,12 @@ h1{
     color: #6d361b;
     background: #fff0d8;
     font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.empty-state{
+    margin: 28px 0 0;
+    text-align: center;
+    color: #5e554d;
     font-weight: 700;
 }

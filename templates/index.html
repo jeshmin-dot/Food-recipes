@@ -24,11 +24,17 @@
             {% endfor %}
         </div>
 
+        <div class="search-panel">
+            <label for="recipe-search">Search recipes</label>
+            <input id="recipe-search" type="search" placeholder="Search by name, ingredient, or category">
+            <p class="result-count" aria-live="polite">{{ recipes|length }} recipes shown</p>
+        </div>
+
         <section class="recipe-container" aria-label="Recipe list">
 
             {% for recipe in recipes %}
 
-            <div class="recipe-card" data-category="{{ recipe.category }}">
+            <div class="recipe-card" data-category="{{ recipe.category }}" data-search="{{ recipe.name }} {{ recipe.category }} {{ recipe.difficulty }} {{ recipe.ingredients }} {{ recipe.description }}">
                 <h2>{{ recipe.name }}</h2>
                 <div class="recipe-meta">
                     <span>{{ recipe.time }}</span>
@@ -43,6 +49,7 @@
             {% endfor %}
 
         </section>
+        <p class="empty-state" hidden>No recipes match your search.</p>
     </main>
 
 <script src="{{ url_for('static',
