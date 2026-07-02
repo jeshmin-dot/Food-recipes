@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Seasonal recipe box</p>
+    <h1>Recipe Garden</h1>
+    <p>Collect colorful dishes, search by pantry ingredients, and cook with a focused step-by-step timer.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="{{ url_for('recipes') }}">Browse recipes</a>
+      <a class="btn ghost" href="{{ url_for('dashboard') }}">Add a recipe</a>
+    </div>
+  </div>
+  {% if featured %}
+  <article class="hero-recipe">
+    <img src="{{ featured.image_url }}" alt="{{ featured.title }}">
+    <div>
+      <span>{{ featured.minutes }} min</span>
+      <h2>{{ featured.title }}</h2>
+      <p>{{ featured.description }}</p>
+    </div>
+  </article>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Fresh picks</p>
+    <h2>Recipes to cook this week</h2>
+  </div>
+  <div class="recipe-grid">
+    {% for recipe in recipes[:6] %}
+      <article class="recipe-card">
+        <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+        <div class="recipe-body">
+          <div class="meta">
+            <span>{{ recipe.cuisine }}</span>
+            <span>{{ recipe.difficulty }}</span>
+          </div>
+          <h3>{{ recipe.title }}</h3>
+          <p>{{ recipe.description }}</p>
+          <div class="stats">
+            <span>{{ recipe.minutes }} min</span>
+            <span>{{ recipe.servings }} servings</span>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% include "partials/cook_strip.html" %}
+{% endblock %}

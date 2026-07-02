@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Saved in browser</p>
+    <h1>Pantry Preferences</h1>
+  </div>
+</section>
+<section class="auth-shell">
+  <form class="panel auth-card" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Cooking style
+      <select name="pantry_style">
+        <option value="quick" {% if pantry_style == "quick" %}selected{% endif %}>Quick meals</option>
+        <option value="vegetable" {% if pantry_style == "vegetable" %}selected{% endif %}>Vegetable forward</option>
+        <option value="weekend" {% if pantry_style == "weekend" %}selected{% endif %}>Weekend projects</option>
+      </select>
+    </label>
+    <label>Default servings <input type="number" name="serving_size" value="{{ serving_size }}" min="1" max="12"></label>
+    <button class="btn primary" type="submit">Save pantry</button>
+  </form>
+</section>
+{% endblock %}

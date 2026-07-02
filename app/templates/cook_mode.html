@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-band">
+  <div>
+    <p class="eyebrow">Cook mode</p>
+    <h1>Focus on one dish</h1>
+  </div>
+  <div class="timer-panel">
+    <span id="timer">25:00</span>
+    <button class="btn primary" data-timer-start>Start</button>
+    <button class="btn ghost" data-timer-reset>Reset</button>
+  </div>
+</section>
+<section class="section">
+  <div class="recipe-grid">
+    {% for recipe in recipes %}
+      <article class="step-card">
+        <h2>{{ recipe.title }}</h2>
+        <ol>
+          {% for step in recipe.steps.split("\n") %}
+            <li>{{ step }}</li>
+          {% endfor %}
+        </ol>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

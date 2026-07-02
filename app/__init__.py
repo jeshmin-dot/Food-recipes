@@ -10,7 +10,7 @@ from app.routes.authroutes import auth_bp
 
 
 def create_app():
-    app = Flask(__name__, template_folder="templates", static_folder="statics")
+    app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY
     app.config["DEBUG"] = config.DEBUG
 
@@ -119,4 +119,4 @@ def create_app():
             flash("Demo reset link prepared. In a live site this would send email.", "success")
         return render_template("forgot_password.html")
 
-    return app
+    return app 

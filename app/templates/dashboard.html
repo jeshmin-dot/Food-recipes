@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Kitchen desk</p>
+    <h1>Add a Recipe</h1>
+  </div>
+</section>
+
+<section class="split-layout">
+  <form class="panel form-panel" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Title <input name="title" required placeholder="Tomato Lentil Soup"></label>
+    <label>Description <textarea name="description" required placeholder="Short, useful description"></textarea></label>
+    <div class="form-row">
+      <label>Cuisine <input name="cuisine" required placeholder="Nepali-inspired"></label>
+      <label>Difficulty <select name="difficulty"><option>Easy</option><option>Medium</option><option>Project</option></select></label>
+    </div>
+    <div class="form-row">
+      <label>Minutes <input type="number" name="minutes" min="1" value="25" required></label>
+      <label>Servings <input type="number" name="servings" min="1" value="4" required></label>
+    </div>
+    <label>Image URL <input name="image_url" required value="https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=1000&q=80"></label>
+    <label>Ingredients <textarea name="ingredients" required placeholder="One ingredient per line"></textarea></label>
+    <label>Steps <textarea name="steps" required placeholder="One step per line"></textarea></label>
+    <button class="btn primary" type="submit">Save recipe</button>
+  </form>
+
+  <aside class="panel">
+    <h2>Current recipes</h2>
+    <ul class="simple-list">
+      {% for recipe in recipes %}
+        <li><span>{{ recipe.title }}</span><strong>{{ recipe.minutes }} min</strong></li>
+      {% endfor %}
+    </ul>
+  </aside>
+</section>
+{% endblock %}

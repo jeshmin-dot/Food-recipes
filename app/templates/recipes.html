@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Recipes | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band">
+  <div>
+    <p class="eyebrow">Find dinner faster</p>
+    <h1>Recipe Library</h1>
+  </div>
+  <form class="search-form" method="get">
+    <input name="q" value="{{ query }}" placeholder="Search pasta, rice, ginger...">
+    <button class="btn primary" type="submit">Search</button>
+  </form>
+</section>
+
+<section class="section">
+  {% include "partials/recipe_table.html" %}
+</section>
+{% endblock %}
