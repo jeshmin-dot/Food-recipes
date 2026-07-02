@@ -1,13 +1,6 @@
-from flask import Flask, render_template
+from app import create_app
 
-from recipes import RECIPES
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    categories = sorted({recipe["category"] for recipe in RECIPES})
-    return render_template("index.html", recipes=RECIPES, categories=categories)
+app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=app.config["DEBUG"])
