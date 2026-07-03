@@ -142,6 +142,65 @@ def create_app():
             return redirect(url_for("dashboard"))
         return render_template("dashboard.html", recipes=all_recipes())
 
+    @app.route("/recipes/<int:recipe_id>/edit", methods=["GET", "POST"])
+    def edit_recipe(recipe_id):
+        if not session.get("user_id"):
+            flash("Log in to manage recipes.", "error")
+            return redirect(url_for("auth.login"))
+
+        recipe = get_recipe(recipe_id)
+        if recipe is None:
+            flash("That recipe no longer exists.", "error")
+            return redirect(url_for("dashboard"))
+        if recipe["owner_id"] != session["user_id"]:
+            flash("You can only edit recipes you added.", "error")
+            return redirect(url_for("dashboard"))
+
+        if request.method == "POST":
+            required = ["title", "description", "cuisine", "difficulty", "minutes",
+                        "servings", "image_url", "ingredients", "steps"]
+            missing = [field for field in required if not request.form.get(field, "").strip()]
+            try:
+                minutes = int(request.form.get("minutes", ""))
+                servings = int(request.form.get("servings", ""))
+            except ValueError:
+                minutes = servings = None
+
+            if missing or minutes is None:
+                flash("Please fill in every field with valid values before saving.", "error")
+                return redirect(url_for("edit_recipe", recipe_id=recipe_id))
+
+            try:
+                with get_connection() as db:
+                    db.execute(
+                        """
+                        UPDATE recipes
+                        SET title = ?, description = ?, cuisine = ?, difficulty = ?,
+                            minutes = ?, servings = ?, image_url = ?, ingredients = ?, steps = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            request.form["title"],
+                            request.form["description"],
+                            request.form["cuisine"],
+                            request.form["difficulty"],
+                            minutes,
+                            servings,
+                            request.form["image_url"],
+                            request.form["ingredients"],
+                            request.form["steps"],
+                            recipe_id,
+                        ),
+                    )
+            except sqlite3.Error:
+                flash("We could not update that recipe. Please try again.", "error")
+                return redirect(url_for("edit_recipe", recipe_id=recipe_id))
+
+            flash("Recipe updated.", "success")
+            return redirect(url_for("dashboard"))
+
+        return render_template("edit_recipe.html", recipe=recipe)
+
     @app.route("/recipes/<int:recipe_id>/delete", methods=["POST"])
     def delete_recipe(recipe_id):
         if not session.get("user_id"):

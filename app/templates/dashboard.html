@@ -33,6 +33,7 @@
           <span>{{ recipe.title }}</span>
           <strong>{{ recipe.minutes }} min</strong>
           {% if recipe.owner_id == session.user_id %}
+            <a class="btn ghost" href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">Edit</a>
             <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn ghost" type="submit" onclick="return confirm('Delete this recipe?');">Delete</button>
