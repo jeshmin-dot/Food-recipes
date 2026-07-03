@@ -49,6 +49,13 @@ def create_app():
         except sqlite3.Error:
             return []
 
+    def get_recipe(recipe_id):
+        try:
+            with get_connection() as db:
+                return db.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
+        except sqlite3.Error:
+            return None
+
     @app.route("/")
     def home():
         recipes = all_recipes()
@@ -134,6 +141,30 @@ def create_app():
             flash("Recipe added to the garden.", "success")
             return redirect(url_for("dashboard"))
         return render_template("dashboard.html", recipes=all_recipes())
+
+    @app.route("/recipes/<int:recipe_id>/delete", methods=["POST"])
+    def delete_recipe(recipe_id):
+        if not session.get("user_id"):
+            flash("Log in to manage recipes.", "error")
+            return redirect(url_for("auth.login"))
+
+        recipe = get_recipe(recipe_id)
+        if recipe is None:
+            flash("That recipe no longer exists.", "error")
+            return redirect(url_for("dashboard"))
+        if recipe["owner_id"] != session["user_id"]:
+            flash("You can only delete recipes you added.", "error")
+            return redirect(url_for("dashboard"))
+
+        try:
+            with get_connection() as db:
+                db.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        except sqlite3.Error:
+            flash("We could not delete that recipe. Please try again.", "error")
+            return redirect(url_for("dashboard"))
+
+        flash("Recipe deleted.", "success")
+        return redirect(url_for("dashboard"))
 
     @app.route("/forgot-password", methods=["GET", "POST"])
     def forgot_password():

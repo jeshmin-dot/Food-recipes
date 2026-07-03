@@ -7,7 +7,6 @@
     <h1>Add a Recipe</h1>
   </div>
 </section>
-
 <section class="split-layout">
   <form class="panel form-panel" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -26,12 +25,20 @@
     <label>Steps <textarea name="steps" required placeholder="One step per line"></textarea></label>
     <button class="btn primary" type="submit">Save recipe</button>
   </form>
-
   <aside class="panel">
     <h2>Current recipes</h2>
     <ul class="simple-list">
       {% for recipe in recipes %}
-        <li><span>{{ recipe.title }}</span><strong>{{ recipe.minutes }} min</strong></li>
+        <li>
+          <span>{{ recipe.title }}</span>
+          <strong>{{ recipe.minutes }} min</strong>
+          {% if recipe.owner_id == session.user_id %}
+            <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn ghost" type="submit" onclick="return confirm('Delete this recipe?');">Delete</button>
+            </form>
+          {% endif %}
+        </li>
       {% endfor %}
     </ul>
   </aside>
