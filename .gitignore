@@ -7,3 +7,6 @@ instance/
 .pytest_cache/
 *.db
 
+
+full_backup.json
+recipe_backup.json
