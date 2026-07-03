@@ -5,6 +5,10 @@
     <p class="eyebrow">Seasonal recipe box</p>
     <h1>Recipe Garden</h1>
     <p>Collect colorful dishes, search by pantry ingredients, and cook with a focused step-by-step timer.</p>
+    <form class="search-form hero-search" method="get" action="{{ url_for('recipes') }}">
+      <input name="q" placeholder="Search pasta, rice, ginger...">
+      <button class="btn primary" type="submit">Search</button>
+    </form>
     <p class="hero-badge">{{ recipe_count }} recipes and growing</p>
     <div class="hero-actions">
       <a class="btn primary" href="{{ url_for('recipes') }}">Browse recipes</a>
@@ -28,6 +32,28 @@
   <div><strong>{{ recipe_count }}</strong><span>Recipes</span></div>
   <div><strong>{{ cuisine_count }}</strong><span>Cuisines</span></div>
   <div><strong>{{ avg_minutes }}</strong><span>Avg minutes</span></div>
+</section>
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Browse</p>
+    <h2>Shop by cuisine</h2>
+  </div>
+  <div class="category-grid">
+    {% for c in all_cuisines %}
+      <a class="category-card" href="{{ url_for('recipes', cuisine=c) }}">
+        <span class="category-icon">
+          {% if "italian" in c.lower() %}??
+          {% elif "japan" in c.lower() %}??
+          {% elif "nepal" in c.lower() or "indian" in c.lower() %}??
+          {% elif "comfort" in c.lower() %}??
+          {% elif "dessert" in c.lower() or "sweet" in c.lower() %}??
+          {% else %}???
+          {% endif %}
+        </span>
+        <span>{{ c }}</span>
+      </a>
+    {% endfor %}
+  </div>
 </section>
 <section class="section">
   <div class="section-head">
