@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Manage Reviews | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h1>Reviews</h1>
+  </div>
+</section>
+<section class="section">
+  <table class="admin-table">
+    <thead><tr><th>Recipe</th><th>User</th><th>Rating</th><th>Comment</th><th></th></tr></thead>
+    <tbody>
+      {% for review in reviews %}
+      <tr>
+        <td>{{ review.recipe.title if review.recipe else "-" }}</td>
+        <td>{{ review.user.name if review.user else "-" }}</td>
+        <td>{{ review.rating }}/5</td>
+        <td>{{ review.comment or "" }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_delete_review', review_id=review.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn ghost" type="submit" onclick="return confirm('Remove this review?');">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

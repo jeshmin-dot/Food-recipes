@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Manage Recipes | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h1>Recipes</h1>
+  </div>
+</section>
+<section class="section">
+  <table class="admin-table">
+    <thead><tr><th>Title</th><th>Cuisine</th><th>Owner</th><th></th></tr></thead>
+    <tbody>
+      {% for recipe in recipes %}
+      <tr>
+        <td>{{ recipe.title }}</td>
+        <td>{{ recipe.cuisine }}</td>
+        <td>{{ recipe.owner.name if recipe.owner else "-" }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_delete_recipe', recipe_id=recipe.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn ghost" type="submit" onclick="return confirm('Remove this recipe?');">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

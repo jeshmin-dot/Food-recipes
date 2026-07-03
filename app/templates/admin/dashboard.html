@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Admin | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h1>Site Overview</h1>
+  </div>
+</section>
+<section class="stats-strip">
+  <div><strong>{{ user_count }}</strong><span>Users</span></div>
+  <div><strong>{{ recipe_count }}</strong><span>Recipes</span></div>
+  <div><strong>{{ category_count }}</strong><span>Categories</span></div>
+  <div><strong>{{ review_count }}</strong><span>Reviews</span></div>
+</section>
+<section class="section admin-links">
+  <a class="btn primary" href="{{ url_for('admin_users') }}">Manage Users</a>
+  <a class="btn primary" href="{{ url_for('admin_recipes') }}">Manage Recipes</a>
+  <a class="btn primary" href="{{ url_for('admin_reviews') }}">Manage Reviews</a>
+</section>
+{% endblock %}

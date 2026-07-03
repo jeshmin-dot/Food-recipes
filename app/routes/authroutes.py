@@ -14,6 +14,7 @@ def login():
         if user:
             session["user_id"] = user.id
             session["user_name"] = user.name
+            session["user_role"] = user.role
             flash("Welcome back to the kitchen.", "success")
             return redirect(url_for("dashboard"))
         flash("That email and password did not match.", "error")

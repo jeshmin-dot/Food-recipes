@@ -5,7 +5,18 @@
   <div>
     <p class="eyebrow">{{ recipe.cuisine }} / {{ recipe.difficulty }}</p>
     <h1>{{ recipe.title }}</h1>
+    {% if recipe.average_rating %}
+      <p class="rating-badge">&#9733; {{ recipe.average_rating }} ({{ recipe.reviews|length }} review{{ 's' if recipe.reviews|length != 1 }})</p>
+    {% endif %}
   </div>
+  {% if current_user %}
+    <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn {{ 'primary' if is_favorited else 'ghost' }}" type="submit">
+        {{ '&#9829; Favorited' if is_favorited else '&#9825; Add to favorites' | safe }}
+      </button>
+    </form>
+  {% endif %}
 </section>
 <section class="section split-layout">
   <article class="panel">
@@ -14,6 +25,7 @@
     <div class="stats">
       <span>{{ recipe.minutes }} min</span>
       <span>{{ recipe.servings }} servings</span>
+      {% if recipe.nutrition %}<span>{{ recipe.nutrition }}</span>{% endif %}
     </div>
     <h2>Steps</h2>
     <ol class="step-card">
@@ -31,5 +43,43 @@
     </ul>
     <a class="btn ghost" href="{{ url_for('recipes') }}">Back to all recipes</a>
   </aside>
+</section>
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Community</p>
+    <h2>Reviews</h2>
+  </div>
+  {% if current_user %}
+    <form class="panel form-panel" method="post" action="{{ url_for('add_review', recipe_id=recipe.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Rating
+        <select name="rating" required>
+          <option value="">Choose a rating</option>
+          <option value="5">5 - Loved it</option>
+          <option value="4">4 - Really good</option>
+          <option value="3">3 - Solid</option>
+          <option value="2">2 - Just okay</option>
+          <option value="1">1 - Not for me</option>
+        </select>
+      </label>
+      <label>Comment (optional) <textarea name="comment" placeholder="What did you think?"></textarea></label>
+      <button class="btn primary" type="submit">Submit review</button>
+    </form>
+  {% else %}
+    <p class="empty">Log in to leave a review.</p>
+  {% endif %}
+  <div class="review-list">
+    {% for review in reviews %}
+      <article class="review-card">
+        <div class="review-head">
+          <strong>{{ review.user.name }}</strong>
+          <span>&#9733; {{ review.rating }}/5</span>
+        </div>
+        {% if review.comment %}<p>{{ review.comment }}</p>{% endif %}
+      </article>
+    {% else %}
+      <p class="empty">No reviews yet - be the first to share your thoughts.</p>
+    {% endfor %}
+  </div>
 </section>
 {% endblock %}
