@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }} | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">{{ recipe.cuisine }} / {{ recipe.difficulty }}</p>
+    <h1>{{ recipe.title }}</h1>
+  </div>
+</section>
+<section class="section split-layout">
+  <article class="panel">
+    <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+    <p>{{ recipe.description }}</p>
+    <div class="stats">
+      <span>{{ recipe.minutes }} min</span>
+      <span>{{ recipe.servings }} servings</span>
+    </div>
+    <h2>Steps</h2>
+    <ol class="step-card">
+      {% for step in recipe.steps.split("\n") %}
+        <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </article>
+  <aside class="panel">
+    <h2>Ingredients</h2>
+    <ul class="simple-list">
+      {% for ingredient in recipe.ingredients.split("\n") %}
+        <li>{{ ingredient }}</li>
+      {% endfor %}
+    </ul>
+    <a class="btn ghost" href="{{ url_for('recipes') }}">Back to all recipes</a>
+  </aside>
+</section>
+{% endblock %}

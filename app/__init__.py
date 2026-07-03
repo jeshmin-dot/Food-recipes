@@ -82,6 +82,13 @@ def create_app():
             ]
         return render_template("recipes.html", recipes=recipe_list, query=query)
 
+    @app.route("/recipes/<int:recipe_id>")
+    def recipe_detail(recipe_id):
+        recipe = get_recipe(recipe_id)
+        if recipe is None:
+            abort(404, description="That recipe could not be found.")
+        return render_template("recipe_detail.html", recipe=recipe)
+
     @app.route("/cook-mode")
     def cook_mode():
         return render_template("cook_mode.html", recipes=all_recipes())
