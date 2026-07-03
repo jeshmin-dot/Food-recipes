@@ -1,9 +1,11 @@
 <div class="recipe-table">
   {% for recipe in recipes %}
     <article class="recipe-row">
-      <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+      <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+        <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+      </a>
       <div>
-        <h2>{{ recipe.title }}</h2>
+        <h2><a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h2>
         <p>{{ recipe.description }}</p>
         <small>{{ recipe.cuisine }} / {{ recipe.difficulty }} / {{ recipe.minutes }} min</small>
       </div>
@@ -17,6 +19,10 @@
       </details>
     </article>
   {% else %}
-    <p class="empty">No recipes matched your search.</p>
+    <div class="empty-state-card">
+      <h2>No recipes found</h2>
+      <p>Try a different search term, or clear your filters to see everything.</p>
+      <a class="btn primary" href="{{ url_for('recipes') }}">Clear filters</a>
+    </div>
   {% endfor %}
 </div>
