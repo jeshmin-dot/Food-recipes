@@ -27,6 +27,7 @@
       <label>Servings <input type="number" name="servings" min="1" value="{{ recipe.servings }}" required></label>
     </div>
     <label>Image URL <input name="image_url" required value="{{ recipe.image_url }}"></label>
+    <label>Nutrition <input name="nutrition" value="{{ recipe.nutrition or '' }}" placeholder="420 kcal, 18g protein"></label>
     <label>Ingredients <textarea name="ingredients" required>{{ recipe.ingredients }}</textarea></label>
     <label>Steps <textarea name="steps" required>{{ recipe.steps }}</textarea></label>
     <button class="btn primary" type="submit">Save changes</button>
