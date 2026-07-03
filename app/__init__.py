@@ -1,4 +1,5 @@
 import secrets
+import sqlite3
 from datetime import datetime
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
@@ -42,8 +43,11 @@ def create_app():
                 abort(400, description="Invalid form token.")
 
     def all_recipes():
-        with get_connection() as db:
-            return db.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
+        try:
+            with get_connection() as db:
+                return db.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
+        except sqlite3.Error:
+            return []
 
     @app.route("/")
     def home():
@@ -89,26 +93,44 @@ def create_app():
             flash("Log in to add recipes.", "error")
             return redirect(url_for("auth.login"))
         if request.method == "POST":
-            with get_connection() as db:
-                db.execute(
-                    """
-                    INSERT INTO recipes
-                    (title, description, cuisine, difficulty, minutes, servings, image_url, ingredients, steps, owner_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        request.form["title"],
-                        request.form["description"],
-                        request.form["cuisine"],
-                        request.form["difficulty"],
-                        int(request.form["minutes"]),
-                        int(request.form["servings"]),
-                        request.form["image_url"],
-                        request.form["ingredients"],
-                        request.form["steps"],
-                        session["user_id"],
-                    ),
-                )
+            required = ["title", "description", "cuisine", "difficulty", "minutes",
+                        "servings", "image_url", "ingredients", "steps"]
+            missing = [field for field in required if not request.form.get(field, "").strip()]
+            try:
+                minutes = int(request.form.get("minutes", ""))
+                servings = int(request.form.get("servings", ""))
+            except ValueError:
+                minutes = servings = None
+
+            if missing or minutes is None:
+                flash("Please fill in every field with valid values before saving.", "error")
+                return redirect(url_for("dashboard"))
+
+            try:
+                with get_connection() as db:
+                    db.execute(
+                        """
+                        INSERT INTO recipes
+                        (title, description, cuisine, difficulty, minutes, servings, image_url, ingredients, steps, owner_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            request.form["title"],
+                            request.form["description"],
+                            request.form["cuisine"],
+                            request.form["difficulty"],
+                            minutes,
+                            servings,
+                            request.form["image_url"],
+                            request.form["ingredients"],
+                            request.form["steps"],
+                            session["user_id"],
+                        ),
+                    )
+            except sqlite3.Error:
+                flash("We could not save that recipe. Please try again.", "error")
+                return redirect(url_for("dashboard"))
+
             flash("Recipe added to the garden.", "success")
             return redirect(url_for("dashboard"))
         return render_template("dashboard.html", recipes=all_recipes())
@@ -119,4 +141,12 @@ def create_app():
             flash("Demo reset link prepared. In a live site this would send email.", "success")
         return render_template("forgot_password.html")
 
-    return app 
+    @app.errorhandler(404)
+    def handle_not_found(_error):
+        return render_template(
+            "error.html",
+            error_title="Page not found",
+            error_message="We couldn't find the page you were looking for.",
+        ), 404
+
+    return app
