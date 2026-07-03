@@ -501,3 +501,40 @@ summary {
   font-weight: 700;
   border-bottom: 2px solid #8c1d18;
 }
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 32px 40px;
+  background: #2d2a26;
+  color: #f3e9dd;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.footer-brand p {
+  margin: 2px 0 0;
+  color: #cbb89a;
+  font-size: 0.85rem;
+}
+.footer-links {
+  display: flex;
+  gap: 18px;
+}
+.footer-links a {
+  color: #f3e9dd;
+  text-decoration: none;
+  font-weight: 600;
+}
+.footer-links a:hover {
+  color: #f3c66e;
+}
+.footer-copy {
+  color: #cbb89a;
+  font-size: 0.85rem;
+}

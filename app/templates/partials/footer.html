@@ -1,0 +1,16 @@
+<footer class="footer">
+  <div class="footer-brand">
+    <span class="brand-mark">RG</span>
+    <div>
+      <strong>{{ app_name }}</strong>
+      <p>Fresh recipes, calm cooking.</p>
+    </div>
+  </div>
+  <nav class="footer-links">
+    <a href="{{ url_for('home') }}">Home</a>
+    <a href="{{ url_for('recipes') }}">Recipes</a>
+    <a href="{{ url_for('cook_mode') }}">Cook Mode</a>
+    <a href="{{ url_for('cookies') }}">Pantry</a>
+  </nav>
+  <span class="footer-copy">&copy; {{ year }} {{ app_name }}</span>
+</footer>

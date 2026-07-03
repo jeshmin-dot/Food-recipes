@@ -20,10 +20,7 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-  <footer class="footer">
-    <span>{{ app_name }} {{ year }}</span>
-    <span>Fresh recipes, calm cooking.</span>
-  </footer>
+  {% include "partials/footer.html" %}
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
