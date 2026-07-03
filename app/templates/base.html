@@ -7,25 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="{{ url_for('home') }}">
-      <span class="brand-mark">RG</span>
-      <span>{{ app_name }}</span>
-    </a>
-    <nav class="nav">
-      <a href="{{ url_for('home') }}">Home</a>
-      <a href="{{ url_for('recipes') }}">Recipes</a>
-      <a href="{{ url_for('cook_mode') }}">Cook Mode</a>
-      <a href="{{ url_for('cookies') }}">Pantry</a>
-      {% if current_user %}
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
-      {% else %}
-        <a href="{{ url_for('auth.login') }}">Login</a>
-      {% endif %}
-    </nav>
-  </header>
-
+  {% include "partials/navbar.html" %}
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -38,7 +20,6 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-
   <footer class="footer">
     <span>{{ app_name }} {{ year }}</span>
     <span>Fresh recipes, calm cooking.</span>
