@@ -1,7 +1,8 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from app.controllers.authcontroller import create_user, verify_user
+from app.models import db
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -11,8 +12,8 @@ def login():
     if request.method == "POST":
         user = verify_user(request.form["email"], request.form["password"])
         if user:
-            session["user_id"] = user["id"]
-            session["user_name"] = user["name"]
+            session["user_id"] = user.id
+            session["user_name"] = user.name
             flash("Welcome back to the kitchen.", "success")
             return redirect(url_for("dashboard"))
         flash("That email and password did not match.", "error")
@@ -27,6 +28,7 @@ def register():
             flash("Account created. You can log in now.", "success")
             return redirect(url_for("auth.login"))
         except IntegrityError:
+            db.session.rollback()
             flash("That email is already registered.", "error")
     return render_template("register.html")
 

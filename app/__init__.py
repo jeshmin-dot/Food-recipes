@@ -1,12 +1,12 @@
 import secrets
-import sqlite3
 from datetime import datetime
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 import config
 from app.controllers.database import initialize_database
-from app.database import get_connection
+from app.models import Recipe, db
 from app.routes.authroutes import auth_bp
 
 
@@ -14,8 +14,13 @@ def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY
     app.config["DEBUG"] = config.DEBUG
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{config.DATABASE_PATH}"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    initialize_database()
+    db.init_app(app)
+    with app.app_context():
+        initialize_database()
+
     app.register_blueprint(auth_bp)
 
     def get_csrf_token():
@@ -43,18 +48,10 @@ def create_app():
                 abort(400, description="Invalid form token.")
 
     def all_recipes():
-        try:
-            with get_connection() as db:
-                return db.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
-        except sqlite3.Error:
-            return []
+        return Recipe.query.order_by(Recipe.created_at.desc()).all()
 
     def get_recipe(recipe_id):
-        try:
-            with get_connection() as db:
-                return db.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
-        except sqlite3.Error:
-            return None
+        return Recipe.query.get(recipe_id)
 
     @app.route("/")
     def home():
@@ -70,9 +67,9 @@ def create_app():
             recipe_list = [
                 recipe
                 for recipe in recipe_list
-                if query in recipe["title"].lower()
-                or query in recipe["cuisine"].lower()
-                or query in recipe["ingredients"].lower()
+                if query in recipe.title.lower()
+                or query in recipe.cuisine.lower()
+                or query in recipe.ingredients.lower()
             ]
         return render_template("recipes.html", recipes=recipe_list, query=query)
 
@@ -114,27 +111,22 @@ def create_app():
                 return redirect(url_for("dashboard"))
 
             try:
-                with get_connection() as db:
-                    db.execute(
-                        """
-                        INSERT INTO recipes
-                        (title, description, cuisine, difficulty, minutes, servings, image_url, ingredients, steps, owner_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            request.form["title"],
-                            request.form["description"],
-                            request.form["cuisine"],
-                            request.form["difficulty"],
-                            minutes,
-                            servings,
-                            request.form["image_url"],
-                            request.form["ingredients"],
-                            request.form["steps"],
-                            session["user_id"],
-                        ),
-                    )
-            except sqlite3.Error:
+                recipe = Recipe(
+                    title=request.form["title"],
+                    description=request.form["description"],
+                    cuisine=request.form["cuisine"],
+                    difficulty=request.form["difficulty"],
+                    minutes=minutes,
+                    servings=servings,
+                    image_url=request.form["image_url"],
+                    ingredients=request.form["ingredients"],
+                    steps=request.form["steps"],
+                    owner_id=session["user_id"],
+                )
+                db.session.add(recipe)
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
                 flash("We could not save that recipe. Please try again.", "error")
                 return redirect(url_for("dashboard"))
 
@@ -152,7 +144,7 @@ def create_app():
         if recipe is None:
             flash("That recipe no longer exists.", "error")
             return redirect(url_for("dashboard"))
-        if recipe["owner_id"] != session["user_id"]:
+        if recipe.owner_id != session["user_id"]:
             flash("You can only edit recipes you added.", "error")
             return redirect(url_for("dashboard"))
 
@@ -171,28 +163,18 @@ def create_app():
                 return redirect(url_for("edit_recipe", recipe_id=recipe_id))
 
             try:
-                with get_connection() as db:
-                    db.execute(
-                        """
-                        UPDATE recipes
-                        SET title = ?, description = ?, cuisine = ?, difficulty = ?,
-                            minutes = ?, servings = ?, image_url = ?, ingredients = ?, steps = ?
-                        WHERE id = ?
-                        """,
-                        (
-                            request.form["title"],
-                            request.form["description"],
-                            request.form["cuisine"],
-                            request.form["difficulty"],
-                            minutes,
-                            servings,
-                            request.form["image_url"],
-                            request.form["ingredients"],
-                            request.form["steps"],
-                            recipe_id,
-                        ),
-                    )
-            except sqlite3.Error:
+                recipe.title = request.form["title"]
+                recipe.description = request.form["description"]
+                recipe.cuisine = request.form["cuisine"]
+                recipe.difficulty = request.form["difficulty"]
+                recipe.minutes = minutes
+                recipe.servings = servings
+                recipe.image_url = request.form["image_url"]
+                recipe.ingredients = request.form["ingredients"]
+                recipe.steps = request.form["steps"]
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
                 flash("We could not update that recipe. Please try again.", "error")
                 return redirect(url_for("edit_recipe", recipe_id=recipe_id))
 
@@ -211,14 +193,15 @@ def create_app():
         if recipe is None:
             flash("That recipe no longer exists.", "error")
             return redirect(url_for("dashboard"))
-        if recipe["owner_id"] != session["user_id"]:
+        if recipe.owner_id != session["user_id"]:
             flash("You can only delete recipes you added.", "error")
             return redirect(url_for("dashboard"))
 
         try:
-            with get_connection() as db:
-                db.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
-        except sqlite3.Error:
+            db.session.delete(recipe)
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
             flash("We could not delete that recipe. Please try again.", "error")
             return redirect(url_for("dashboard"))
 
