@@ -57,7 +57,16 @@ def create_app():
     def home():
         recipes = all_recipes()
         featured = recipes[0] if recipes else None
-        return render_template("home.html", recipes=recipes, featured=featured)
+        cuisines = {recipe.cuisine for recipe in recipes}
+        avg_minutes = round(sum(r.minutes for r in recipes) / len(recipes)) if recipes else 0
+        return render_template(
+            "home.html",
+            recipes=recipes,
+            featured=featured,
+            recipe_count=len(recipes),
+            cuisine_count=len(cuisines),
+            avg_minutes=avg_minutes,
+        )
 
     @app.route("/recipes")
     def recipes():

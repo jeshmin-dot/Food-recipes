@@ -476,3 +476,22 @@ summary {
     flex-direction: column;
   }
 }
+
+.stats-strip {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  padding: 24px 0;
+  text-align: center;
+}
+.stats-strip strong {
+  display: block;
+  font-size: 1.8rem;
+  color: #8c1d18;
+}
+.stats-strip span {
+  color: #6d361b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
