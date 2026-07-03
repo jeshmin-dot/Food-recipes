@@ -5,6 +5,7 @@
     <p class="eyebrow">Seasonal recipe box</p>
     <h1>Recipe Garden</h1>
     <p>Collect colorful dishes, search by pantry ingredients, and cook with a focused step-by-step timer.</p>
+    <p class="hero-badge">{{ recipe_count }} recipes and growing</p>
     <div class="hero-actions">
       <a class="btn primary" href="{{ url_for('recipes') }}">Browse recipes</a>
       <a class="btn ghost" href="{{ url_for('dashboard') }}">Add a recipe</a>
@@ -12,12 +13,14 @@
   </div>
   {% if featured %}
   <article class="hero-recipe">
-    <img src="{{ featured.image_url }}" alt="{{ featured.title }}">
-    <div>
-      <span>{{ featured.minutes }} min</span>
-      <h2>{{ featured.title }}</h2>
-      <p>{{ featured.description }}</p>
-    </div>
+    <a href="{{ url_for('recipe_detail', recipe_id=featured.id) }}">
+      <img src="{{ featured.image_url }}" alt="{{ featured.title }}">
+      <div>
+        <span>{{ featured.minutes }} min</span>
+        <h2>{{ featured.title }}</h2>
+        <p>{{ featured.description }}</p>
+      </div>
+    </a>
   </article>
   {% endif %}
 </section>
@@ -34,19 +37,21 @@
   <div class="recipe-grid">
     {% for recipe in recipes[:6] %}
       <article class="recipe-card">
-        <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
-        <div class="recipe-body">
-          <div class="meta">
-            <span>{{ recipe.cuisine }}</span>
-            <span>{{ recipe.difficulty }}</span>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+          <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+          <div class="recipe-body">
+            <div class="meta">
+              <span>{{ recipe.cuisine }}</span>
+              <span>{{ recipe.difficulty }}</span>
+            </div>
+            <h3>{{ recipe.title }}</h3>
+            <p>{{ recipe.description }}</p>
+            <div class="stats">
+              <span>{{ recipe.minutes }} min</span>
+              <span>{{ recipe.servings }} servings</span>
+            </div>
           </div>
-          <h3>{{ recipe.title }}</h3>
-          <p>{{ recipe.description }}</p>
-          <div class="stats">
-            <span>{{ recipe.minutes }} min</span>
-            <span>{{ recipe.servings }} servings</span>
-          </div>
-        </div>
+        </a>
       </article>
     {% endfor %}
   </div>
