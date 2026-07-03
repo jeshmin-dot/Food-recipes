@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime
+from functools import wraps
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import SQLAlchemyError
@@ -49,9 +50,22 @@ def create_app():
             if not sent or not stored or not secrets.compare_digest(sent, stored):
                 abort(400, description="Invalid form token.")
 
-    def require_admin():
-        if session.get("user_role") != "admin":
-            abort(404, description="That page could not be found.")
+    def login_required(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get("user_id"):
+                flash("Please log in to continue.", "error")
+                return redirect(url_for("auth.login"))
+            return view(*args, **kwargs)
+        return wrapped
+
+    def admin_required(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if session.get("user_role") != "admin":
+                abort(404, description="That page could not be found.")
+            return view(*args, **kwargs)
+        return wrapped
 
     def all_recipes():
         return Recipe.query.order_by(Recipe.created_at.desc()).all()
@@ -144,11 +158,8 @@ def create_app():
         )
 
     @app.route("/recipes/<int:recipe_id>/favorite", methods=["POST"])
+    @login_required
     def toggle_favorite(recipe_id):
-        if not session.get("user_id"):
-            flash("Log in to save favorites.", "error")
-            return redirect(url_for("auth.login"))
-
         recipe = get_recipe(recipe_id)
         if recipe is None:
             flash("That recipe no longer exists.", "error")
@@ -170,20 +181,28 @@ def create_app():
         return redirect(url_for("recipe_detail", recipe_id=recipe_id))
 
     @app.route("/favorites")
+    @login_required
     def favorites():
-        if not session.get("user_id"):
-            flash("Log in to see your favorites.", "error")
-            return redirect(url_for("auth.login"))
         favorite_rows = Favorite.query.filter_by(user_id=session["user_id"]).all()
         favorite_recipes = [row.recipe for row in favorite_rows]
         return render_template("favorites.html", recipes=favorite_recipes)
 
-    @app.route("/recipes/<int:recipe_id>/review", methods=["POST"])
-    def add_review(recipe_id):
-        if not session.get("user_id"):
-            flash("Log in to leave a review.", "error")
-            return redirect(url_for("auth.login"))
+    @app.route("/profile")
+    @login_required
+    def profile():
+        user = User.query.get(session["user_id"])
+        favorite_rows = Favorite.query.filter_by(user_id=session["user_id"]).all()
+        favorite_recipes = [row.recipe for row in favorite_rows]
+        return render_template(
+            "profile.html",
+            profile_user=user,
+            uploaded_recipes=user.recipes,
+            favorite_recipes=favorite_recipes,
+        )
 
+    @app.route("/recipes/<int:recipe_id>/review", methods=["POST"])
+    @login_required
+    def add_review(recipe_id):
         recipe = get_recipe(recipe_id)
         if recipe is None:
             flash("That recipe no longer exists.", "error")
@@ -234,10 +253,8 @@ def create_app():
         )
 
     @app.route("/dashboard", methods=["GET", "POST"])
+    @login_required
     def dashboard():
-        if not session.get("user_id"):
-            flash("Log in to add recipes.", "error")
-            return redirect(url_for("auth.login"))
         if request.method == "POST":
             required = ["title", "description", "cuisine", "difficulty", "minutes",
                         "servings", "image_url", "ingredients", "steps"]
@@ -279,11 +296,8 @@ def create_app():
         return render_template("dashboard.html", recipes=all_recipes())
 
     @app.route("/recipes/<int:recipe_id>/edit", methods=["GET", "POST"])
+    @login_required
     def edit_recipe(recipe_id):
-        if not session.get("user_id"):
-            flash("Log in to manage recipes.", "error")
-            return redirect(url_for("auth.login"))
-
         recipe = get_recipe(recipe_id)
         if recipe is None:
             flash("That recipe no longer exists.", "error")
@@ -330,11 +344,8 @@ def create_app():
         return render_template("edit_recipe.html", recipe=recipe)
 
     @app.route("/recipes/<int:recipe_id>/delete", methods=["POST"])
+    @login_required
     def delete_recipe(recipe_id):
-        if not session.get("user_id"):
-            flash("Log in to manage recipes.", "error")
-            return redirect(url_for("auth.login"))
-
         recipe = get_recipe(recipe_id)
         if recipe is None:
             flash("That recipe no longer exists.", "error")
@@ -355,8 +366,8 @@ def create_app():
         return redirect(url_for("dashboard"))
 
     @app.route("/admin")
+    @admin_required
     def admin_dashboard():
-        require_admin()
         return render_template(
             "admin/dashboard.html",
             user_count=User.query.count(),
@@ -366,13 +377,13 @@ def create_app():
         )
 
     @app.route("/admin/users")
+    @admin_required
     def admin_users():
-        require_admin()
         return render_template("admin/users.html", users=User.query.order_by(User.name).all())
 
     @app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
+    @admin_required
     def admin_delete_user(user_id):
-        require_admin()
         if user_id == session.get("user_id"):
             flash("You can't delete your own account from here.", "error")
             return redirect(url_for("admin_users"))
@@ -385,13 +396,13 @@ def create_app():
         return redirect(url_for("admin_users"))
 
     @app.route("/admin/recipes")
+    @admin_required
     def admin_recipes():
-        require_admin()
         return render_template("admin/recipes.html", recipes=all_recipes())
 
     @app.route("/admin/recipes/<int:recipe_id>/delete", methods=["POST"])
+    @admin_required
     def admin_delete_recipe(recipe_id):
-        require_admin()
         recipe = get_recipe(recipe_id)
         if recipe:
             db.session.delete(recipe)
@@ -400,13 +411,13 @@ def create_app():
         return redirect(url_for("admin_recipes"))
 
     @app.route("/admin/reviews")
+    @admin_required
     def admin_reviews():
-        require_admin()
         return render_template("admin/reviews.html", reviews=Review.query.order_by(Review.created_at.desc()).all())
 
     @app.route("/admin/reviews/<int:review_id>/delete", methods=["POST"])
+    @admin_required
     def admin_delete_review(review_id):
-        require_admin()
         review = Review.query.get(review_id)
         if review:
             db.session.delete(review)

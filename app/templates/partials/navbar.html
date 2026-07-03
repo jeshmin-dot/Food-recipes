@@ -11,6 +11,7 @@
     <a href="{{ url_for('cook_mode') }}" class="{{ 'active' if request.endpoint == 'cook_mode' }}">Cook Mode</a>
     <a href="{{ url_for('cookies') }}" class="{{ 'active' if request.endpoint == 'cookies' }}">Pantry</a>
     {% if current_user %}
+      <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">Profile</a>
       <a href="{{ url_for('favorites') }}" class="{{ 'active' if request.endpoint == 'favorites' }}">Favorites</a>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
       {% if is_admin %}

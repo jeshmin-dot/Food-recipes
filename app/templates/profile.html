@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}My Profile | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>{{ profile_user.name }}</h1>
+    <p>{{ profile_user.email }} &middot; {{ profile_user.role }}</p>
+  </div>
+</section>
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Your kitchen</p>
+    <h2>Recipes you've added ({{ uploaded_recipes|length }})</h2>
+  </div>
+  <div class="recipe-grid">
+    {% for recipe in uploaded_recipes %}
+      <article class="recipe-card">
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+          <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+          <div class="recipe-body">
+            <div class="meta">
+              <span>{{ recipe.cuisine }}</span>
+              <span>{{ recipe.difficulty }}</span>
+            </div>
+            <h3>{{ recipe.title }}</h3>
+            <div class="stats">
+              <span>{{ recipe.minutes }} min</span>
+              <span>{{ recipe.servings }} servings</span>
+            </div>
+          </div>
+        </a>
+      </article>
+    {% else %}
+      <p class="empty">You haven't added any recipes yet. <a href="{{ url_for('dashboard') }}">Add your first one</a>.</p>
+    {% endfor %}
+  </div>
+</section>
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Saved</p>
+    <h2>Your favorites ({{ favorite_recipes|length }})</h2>
+  </div>
+  <div class="recipe-grid">
+    {% for recipe in favorite_recipes %}
+      <article class="recipe-card">
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+          <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+          <div class="recipe-body">
+            <div class="meta">
+              <span>{{ recipe.cuisine }}</span>
+              <span>{{ recipe.difficulty }}</span>
+            </div>
+            <h3>{{ recipe.title }}</h3>
+            <div class="stats">
+              <span>{{ recipe.minutes }} min</span>
+              <span>{{ recipe.servings }} servings</span>
+            </div>
+          </div>
+        </a>
+      </article>
+    {% else %}
+      <p class="empty">No favorites yet. <a href="{{ url_for('recipes') }}">Browse recipes</a> to find some.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
