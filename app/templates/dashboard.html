@@ -8,7 +8,7 @@
   </div>
 </section>
 <section class="split-layout">
-  <form class="panel form-panel" method="post">
+  <form class="panel form-panel" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Title <input name="title" required placeholder="Tomato Lentil Soup"></label>
     <label>Description <textarea name="description" required placeholder="Short, useful description"></textarea></label>
@@ -20,7 +20,8 @@
       <label>Minutes <input type="number" name="minutes" min="1" value="25" required></label>
       <label>Servings <input type="number" name="servings" min="1" value="4" required></label>
     </div>
-    <label>Image URL <input name="image_url" required value="https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=1000&q=80"></label>
+    <label>Upload an image <input type="file" name="image_file" accept=".png,.jpg,.jpeg,.gif,.webp"></label>
+    <label>...or paste an image URL <input name="image_url" placeholder="https://..."></label>
     <label>Nutrition <input name="nutrition" placeholder="420 kcal, 18g protein"></label>
     <label>Ingredients <textarea name="ingredients" required placeholder="One ingredient per line"></textarea></label>
     <label>Steps <textarea name="steps" required placeholder="One step per line"></textarea></label>
@@ -33,7 +34,7 @@
         <li>
           <span>{{ recipe.title }}</span>
           <strong>{{ recipe.minutes }} min</strong>
-          {% if recipe.owner_id == session.user_id %}
+          {% if recipe.owner_id == session.user_id or is_admin %}
             <a class="btn ghost" href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">Edit</a>
             <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

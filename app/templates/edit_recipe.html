@@ -8,7 +8,7 @@
   </div>
 </section>
 <section class="split-layout">
-  <form class="panel form-panel" method="post">
+  <form class="panel form-panel" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Title <input name="title" required value="{{ recipe.title }}"></label>
     <label>Description <textarea name="description" required>{{ recipe.description }}</textarea></label>
@@ -26,7 +26,9 @@
       <label>Minutes <input type="number" name="minutes" min="1" value="{{ recipe.minutes }}" required></label>
       <label>Servings <input type="number" name="servings" min="1" value="{{ recipe.servings }}" required></label>
     </div>
-    <label>Image URL <input name="image_url" required value="{{ recipe.image_url }}"></label>
+    <p>Current image: <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" style="max-width:120px;border-radius:8px;"></p>
+    <label>Upload a new image (optional) <input type="file" name="image_file" accept=".png,.jpg,.jpeg,.gif,.webp"></label>
+    <label>...or paste a new image URL <input name="image_url" placeholder="Leave blank to keep current image"></label>
     <label>Nutrition <input name="nutrition" value="{{ recipe.nutrition or '' }}" placeholder="420 kcal, 18g protein"></label>
     <label>Ingredients <textarea name="ingredients" required>{{ recipe.ingredients }}</textarea></label>
     <label>Steps <textarea name="steps" required>{{ recipe.steps }}</textarea></label>

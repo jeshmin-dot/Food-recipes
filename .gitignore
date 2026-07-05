@@ -10,3 +10,8 @@ instance/
 
 full_backup.json
 recipe_backup.json
+
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+.env
