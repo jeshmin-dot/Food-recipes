@@ -4,13 +4,14 @@
     <span>{{ app_name }}</span>
   </a>
   <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
-  <label for="nav-toggle" class="nav-toggle-btn" aria-label="Toggle menu">&#9776;</label>
-  <nav class="nav">
-    <a href="{{ url_for('home') }}" class="{{ 'active' if request.endpoint == 'home' }}">Home</a>
-    <a href="{{ url_for('recipes') }}" class="{{ 'active' if request.endpoint == 'recipes' }}">Recipes</a>
-    <a href="{{ url_for('cook_mode') }}" class="{{ 'active' if request.endpoint == 'cook_mode' }}">Cook Mode</a>
-    <a href="{{ url_for('cookies') }}" class="{{ 'active' if request.endpoint == 'cookies' }}">Pantry</a>
+  <label for="nav-toggle" class="nav-toggle-btn" aria-label="Toggle navigation menu" tabindex="0">&#9776;</label>
+  <nav class="nav" aria-label="Main navigation">
+    <a href="{{ url_for('home') }}" class="{{ 'active' if request.endpoint == 'home' }}" {{ 'aria-current="page"' if request.endpoint == 'home' else "" | safe }}>Home</a>
+    <a href="{{ url_for('recipes') }}" class="{{ 'active' if request.endpoint == 'recipes' }}" {{ 'aria-current="page"' if request.endpoint == 'recipes' else "" | safe }}>Recipes</a>
+    <a href="{{ url_for('cook_mode') }}" class="{{ 'active' if request.endpoint == 'cook_mode' }}" {{ 'aria-current="page"' if request.endpoint == 'cook_mode' else "" | safe }}>Cook Mode</a>
+    <a href="{{ url_for('cookies') }}" class="{{ 'active' if request.endpoint == 'cookies' }}" {{ 'aria-current="page"' if request.endpoint == 'cookies' else "" | safe }}>Pantry</a>
     {% if current_user %}
+      <a href="{{ url_for('meal_planner') }}" class="{{ 'active' if request.endpoint in ['meal_planner', 'shopping_list'] }}">Meal Planner</a>
       <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">Profile</a>
       <a href="{{ url_for('favorites') }}" class="{{ 'active' if request.endpoint == 'favorites' }}">Favorites</a>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
@@ -21,5 +22,6 @@
     {% else %}
       <a href="{{ url_for('auth.login') }}" class="{{ 'active' if request.endpoint == 'auth.login' }}">Login</a>
     {% endif %}
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">&#9788;</button>
   </nav>
 </header>

@@ -44,6 +44,27 @@
     <a class="btn ghost" href="{{ url_for('recipes') }}">Back to all recipes</a>
   </aside>
 </section>
+{% if related %}
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">You might also like</p>
+    <h2>More {{ recipe.cuisine }} recipes</h2>
+  </div>
+  <div class="recipe-grid">
+    {% for r in related %}
+      <article class="recipe-card">
+        <a href="{{ url_for('recipe_detail', recipe_id=r.id) }}">
+          <img src="{{ r.image_url }}" alt="{{ r.title }}">
+          <div class="recipe-body">
+            <h3>{{ r.title }}</h3>
+            <div class="stats"><span>{{ r.minutes }} min</span></div>
+          </div>
+        </a>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 <section class="section">
   <div class="section-head">
     <p class="eyebrow">Community</p>

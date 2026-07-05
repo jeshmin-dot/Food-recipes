@@ -105,3 +105,21 @@ class Review(db.Model):
         if value is None or value < 1 or value > 5:
             raise ValueError("Rating must be between 1 and 5.")
         return value
+
+
+class MealPlanEntry(db.Model):
+    __tablename__ = "meal_plan_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=False, index=True)
+    day_of_week = db.Column(db.String, nullable=False)
+    meal_type = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    user = db.relationship("User", backref="meal_plan_entries")
+    recipe = db.relationship("Recipe")
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "day_of_week", "meal_type", name="one_recipe_per_slot"),
+    )

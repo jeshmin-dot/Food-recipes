@@ -1,3 +1,4 @@
+import os
 import secrets
 from datetime import datetime
 from functools import wraps
@@ -8,8 +9,13 @@ from sqlalchemy.exc import SQLAlchemyError
 import config
 from app.controllers.database import initialize_database
 from app.database import get_or_create_category
-from app.models import Category, Favorite, Recipe, Review, User, db
+from app.models import Category, Favorite, MealPlanEntry, Recipe, Review, User, db
 from app.routes.authroutes import auth_bp
+from app.utils import save_uploaded_image
+
+DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+MEALS = ["Breakfast", "Lunch", "Dinner"]
+REQUIRED_RECIPE_FIELDS = ["title", "description", "cuisine", "difficulty", "minutes", "servings", "ingredients", "steps"]
 
 
 def create_app():
@@ -18,6 +24,9 @@ def create_app():
     app.config["DEBUG"] = config.DEBUG
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{config.DATABASE_PATH}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
+    app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
+    app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
 
     db.init_app(app)
     with app.app_context():
@@ -63,7 +72,7 @@ def create_app():
         @wraps(view)
         def wrapped(*args, **kwargs):
             if session.get("user_role") != "admin":
-                abort(404, description="That page could not be found.")
+                abort(403, description="You don't have permission to view this page.")
             return view(*args, **kwargs)
         return wrapped
 
@@ -81,6 +90,34 @@ def create_app():
         if time_bucket == "over40":
             return recipe.minutes > 40
         return True
+
+    def resolve_recipe_image(form, files):
+        upload_folder = os.path.join(app.static_folder, "uploads")
+        uploaded_name = save_uploaded_image(files.get("image_file"), upload_folder)
+        if uploaded_name:
+            return url_for("static", filename=f"uploads/{uploaded_name}")
+        url_value = form.get("image_url", "").strip()
+        return url_value or None
+
+    def validate_recipe_form(form, require_image):
+        """Shared validation for both the add and edit recipe forms.
+
+        Returns (minutes, servings, error_message). error_message is None
+        when everything's valid; minutes/servings are None if invalid.
+        """
+        missing = [field for field in REQUIRED_RECIPE_FIELDS if not form.get(field, "").strip()]
+        try:
+            minutes = int(form.get("minutes", ""))
+            servings = int(form.get("servings", ""))
+        except ValueError:
+            minutes = servings = None
+
+        if require_image and not form.get("image_url", "").strip():
+            missing.append("image")
+
+        if missing or minutes is None:
+            return None, None, "Please fill in every field with valid values before saving."
+        return minutes, servings, None
 
     @app.route("/")
     def home():
@@ -153,8 +190,13 @@ def create_app():
                 user_id=session["user_id"], recipe_id=recipe.id
             ).first() is not None
         reviews = Review.query.filter_by(recipe_id=recipe.id).order_by(Review.created_at.desc()).all()
+        related = (
+            Recipe.query.filter(Recipe.category_id == recipe.category_id, Recipe.id != recipe.id)
+            .limit(3)
+            .all()
+        )
         return render_template(
-            "recipe_detail.html", recipe=recipe, is_favorited=is_favorited, reviews=reviews
+            "recipe_detail.html", recipe=recipe, is_favorited=is_favorited, reviews=reviews, related=related
         )
 
     @app.route("/recipes/<int:recipe_id>/favorite", methods=["POST"])
@@ -193,11 +235,13 @@ def create_app():
         user = User.query.get(session["user_id"])
         favorite_rows = Favorite.query.filter_by(user_id=session["user_id"]).all()
         favorite_recipes = [row.recipe for row in favorite_rows]
+        review_rows = Review.query.filter_by(user_id=session["user_id"]).all()
         return render_template(
             "profile.html",
             profile_user=user,
             uploaded_recipes=user.recipes,
             favorite_recipes=favorite_recipes,
+            review_count=len(review_rows),
         )
 
     @app.route("/recipes/<int:recipe_id>/review", methods=["POST"])
@@ -234,6 +278,73 @@ def create_app():
         flash("Thanks for your review!", "success")
         return redirect(url_for("recipe_detail", recipe_id=recipe_id))
 
+    @app.route("/meal-planner", methods=["GET", "POST"])
+    @login_required
+    def meal_planner():
+        if request.method == "POST":
+            try:
+                for day in DAYS:
+                    for meal in MEALS:
+                        field_name = f"{day}_{meal}"
+                        recipe_id = request.form.get(field_name, "").strip()
+
+                        existing = MealPlanEntry.query.filter_by(
+                            user_id=session["user_id"], day_of_week=day, meal_type=meal
+                        ).first()
+
+                        if not recipe_id:
+                            if existing:
+                                db.session.delete(existing)
+                            continue
+
+                        if existing:
+                            existing.recipe_id = int(recipe_id)
+                        else:
+                            db.session.add(
+                                MealPlanEntry(
+                                    user_id=session["user_id"],
+                                    recipe_id=int(recipe_id),
+                                    day_of_week=day,
+                                    meal_type=meal,
+                                )
+                            )
+                db.session.commit()
+                flash("Meal plan saved.", "success")
+            except SQLAlchemyError:
+                db.session.rollback()
+                flash("We could not save your meal plan. Please try again.", "error")
+            return redirect(url_for("meal_planner"))
+
+        entries = MealPlanEntry.query.filter_by(user_id=session["user_id"]).all()
+        plan = {(e.day_of_week, e.meal_type): e.recipe for e in entries}
+        return render_template(
+            "meal_planner.html",
+            days=DAYS,
+            meals=MEALS,
+            plan=plan,
+            all_recipes=all_recipes(),
+        )
+
+    @app.route("/meal-planner/shopping-list")
+    @login_required
+    def shopping_list():
+        entries = MealPlanEntry.query.filter_by(user_id=session["user_id"]).all()
+        ingredient_lines = []
+        for entry in entries:
+            for line in entry.recipe.ingredients.split("\n"):
+                line = line.strip()
+                if line:
+                    ingredient_lines.append(line)
+
+        counts = {}
+        for line in ingredient_lines:
+            key = line.lower()
+            counts[key] = counts.get(key, (line, 0))
+            counts[key] = (counts[key][0], counts[key][1] + 1)
+
+        combined = sorted(counts.values(), key=lambda pair: pair[0].lower())
+        return render_template("shopping_list.html", ingredients=combined, has_plan=bool(entries))
+
     @app.route("/cook-mode")
     def cook_mode():
         return render_template("cook_mode.html", recipes=all_recipes())
@@ -256,17 +367,11 @@ def create_app():
     @login_required
     def dashboard():
         if request.method == "POST":
-            required = ["title", "description", "cuisine", "difficulty", "minutes",
-                        "servings", "image_url", "ingredients", "steps"]
-            missing = [field for field in required if not request.form.get(field, "").strip()]
-            try:
-                minutes = int(request.form.get("minutes", ""))
-                servings = int(request.form.get("servings", ""))
-            except ValueError:
-                minutes = servings = None
+            image_url = resolve_recipe_image(request.form, request.files)
+            minutes, servings, error = validate_recipe_form(request.form, require_image=not image_url)
 
-            if missing or minutes is None:
-                flash("Please fill in every field with valid values before saving.", "error")
+            if error:
+                flash(error, "error")
                 return redirect(url_for("dashboard"))
 
             try:
@@ -278,7 +383,7 @@ def create_app():
                     difficulty=request.form["difficulty"],
                     minutes=minutes,
                     servings=servings,
-                    image_url=request.form["image_url"],
+                    image_url=image_url,
                     ingredients=request.form["ingredients"],
                     steps=request.form["steps"],
                     nutrition=request.form.get("nutrition", "").strip() or None,
@@ -293,7 +398,17 @@ def create_app():
 
             flash("Recipe added to the garden.", "success")
             return redirect(url_for("dashboard"))
-        return render_template("dashboard.html", recipes=all_recipes())
+
+        user_recipe_count = Recipe.query.filter_by(owner_id=session["user_id"]).count()
+        user_favorite_count = Favorite.query.filter_by(user_id=session["user_id"]).count()
+        user_review_count = Review.query.filter_by(user_id=session["user_id"]).count()
+        return render_template(
+            "dashboard.html",
+            recipes=all_recipes(),
+            user_recipe_count=user_recipe_count,
+            user_favorite_count=user_favorite_count,
+            user_review_count=user_review_count,
+        )
 
     @app.route("/recipes/<int:recipe_id>/edit", methods=["GET", "POST"])
     @login_required
@@ -303,21 +418,14 @@ def create_app():
             flash("That recipe no longer exists.", "error")
             return redirect(url_for("dashboard"))
         if recipe.owner_id != session["user_id"] and session.get("user_role") != "admin":
-            flash("You can only edit recipes you added.", "error")
-            return redirect(url_for("dashboard"))
+            abort(403, description="You can only edit recipes you added.")
 
         if request.method == "POST":
-            required = ["title", "description", "cuisine", "difficulty", "minutes",
-                        "servings", "image_url", "ingredients", "steps"]
-            missing = [field for field in required if not request.form.get(field, "").strip()]
-            try:
-                minutes = int(request.form.get("minutes", ""))
-                servings = int(request.form.get("servings", ""))
-            except ValueError:
-                minutes = servings = None
+            new_image = resolve_recipe_image(request.form, request.files)
+            minutes, servings, error = validate_recipe_form(request.form, require_image=False)
 
-            if missing or minutes is None:
-                flash("Please fill in every field with valid values before saving.", "error")
+            if error:
+                flash(error, "error")
                 return redirect(url_for("edit_recipe", recipe_id=recipe_id))
 
             try:
@@ -328,7 +436,8 @@ def create_app():
                 recipe.difficulty = request.form["difficulty"]
                 recipe.minutes = minutes
                 recipe.servings = servings
-                recipe.image_url = request.form["image_url"]
+                if new_image:
+                    recipe.image_url = new_image
                 recipe.ingredients = request.form["ingredients"]
                 recipe.steps = request.form["steps"]
                 recipe.nutrition = request.form.get("nutrition", "").strip() or None
@@ -351,8 +460,7 @@ def create_app():
             flash("That recipe no longer exists.", "error")
             return redirect(url_for("dashboard"))
         if recipe.owner_id != session["user_id"] and session.get("user_role") != "admin":
-            flash("You can only delete recipes you added.", "error")
-            return redirect(url_for("dashboard"))
+            abort(403, description="You can only delete recipes you added.")
 
         try:
             db.session.delete(recipe)
@@ -431,6 +539,14 @@ def create_app():
             flash("Demo reset link prepared. In a live site this would send email.", "success")
         return render_template("forgot_password.html")
 
+    @app.errorhandler(403)
+    def handle_forbidden(_error):
+        return render_template(
+            "error.html",
+            error_title="Access denied",
+            error_message="You don't have permission to view this page.",
+        ), 403
+
     @app.errorhandler(404)
     def handle_not_found(_error):
         return render_template(
@@ -438,5 +554,14 @@ def create_app():
             error_title="Page not found",
             error_message="We couldn't find the page you were looking for.",
         ), 404
+
+    @app.errorhandler(500)
+    def handle_server_error(_error):
+        db.session.rollback()
+        return render_template(
+            "error.html",
+            error_title="Something went wrong",
+            error_message="An unexpected error occurred. Please try again.",
+        ), 500
 
     return app
