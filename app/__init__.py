@@ -1,4 +1,5 @@
 import os
+import random
 import secrets
 from datetime import datetime
 from functools import wraps
@@ -178,6 +179,15 @@ def create_app():
             all_cuisines=all_cuisines,
             all_difficulties=all_difficulties,
         )
+
+    @app.route("/recipes/random")
+    def random_recipe():
+        recipes = all_recipes()
+        if not recipes:
+            flash("No recipes available yet.", "error")
+            return redirect(url_for("recipes"))
+        choice = random.choice(recipes)
+        return redirect(url_for("recipe_detail", recipe_id=choice.id))
 
     @app.route("/recipes/<int:recipe_id>")
     def recipe_detail(recipe_id):
