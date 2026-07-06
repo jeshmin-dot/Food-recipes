@@ -835,3 +835,21 @@ textarea:focus-visible {
   outline: 3px solid var(--honey);
   outline-offset: 2px;
 }
+
+@media print {
+  .no-print, .site-header, .footer, .flash-wrap {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .panel {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
+.recipe-actions {
+  display: flex;
+  gap: 10px;
+}
