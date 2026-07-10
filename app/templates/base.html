@@ -22,6 +22,7 @@
     {% block content %}{% endblock %}
   </main>
   {% include "partials/footer.html" %}
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">&#8593;</button>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

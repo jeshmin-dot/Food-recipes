@@ -15,6 +15,7 @@
       <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">Profile</a>
       <a href="{{ url_for('favorites') }}" class="{{ 'active' if request.endpoint == 'favorites' }}">Favorites</a>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('account_settings') }}" class="{{ 'active' if request.endpoint == 'account_settings' }}">Account</a>
       {% if is_admin %}
         <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin') }}">Admin</a>
       {% endif %}
@@ -22,6 +23,5 @@
     {% else %}
       <a href="{{ url_for('auth.login') }}" class="{{ 'active' if request.endpoint == 'auth.login' }}">Login</a>
     {% endif %}
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">&#9788;</button>
   </nav>
 </header>

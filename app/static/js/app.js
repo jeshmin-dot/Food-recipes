@@ -47,29 +47,39 @@ if (resetButton) {
 
 renderTimer();
 
-// Dark mode: save preference in localStorage, apply on every page load
-(function () {
-  const STORAGE_KEY = "recipe-garden-theme";
-  const root = document.documentElement;
-  const toggleButton = document.querySelector("#theme-toggle");
 
-  function applyTheme(theme) {
-    if (theme === "dark") {
-      root.setAttribute("data-theme", "dark");
-    } else {
-      root.removeAttribute("data-theme");
+// Loading skeleton: add a shimmer class to recipe images until they finish loading
+(function () {
+  document.querySelectorAll('.recipe-card img, .recipe-row img').forEach(function (img) {
+    if (!img.complete) {
+      img.classList.add('skeleton');
+      img.addEventListener('load', function () {
+        img.classList.remove('skeleton');
+      });
+    }
+  });
+})();
+
+// Sticky navbar shadow + back-to-top button
+(function () {
+  const header = document.querySelector(".site-header");
+  const backToTop = document.querySelector("#back-to-top");
+
+  function onScroll() {
+    if (header) {
+      header.classList.toggle("scrolled", window.scrollY > 10);
+    }
+    if (backToTop) {
+      backToTop.classList.toggle("visible", window.scrollY > 400);
     }
   }
 
-  const savedTheme = localStorage.getItem(STORAGE_KEY) || "light";
-  applyTheme(savedTheme);
+  window.addEventListener("scroll", onScroll);
+  onScroll();
 
-  if (toggleButton) {
-    toggleButton.addEventListener("click", function () {
-      const isDark = root.getAttribute("data-theme") === "dark";
-      const nextTheme = isDark ? "light" : "dark";
-      applyTheme(nextTheme);
-      localStorage.setItem(STORAGE_KEY, nextTheme);
+  if (backToTop) {
+    backToTop.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
   }
 })();
