@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 import config
@@ -126,6 +127,9 @@ def create_app():
         featured = recipes[0] if recipes else None
         cuisines = sorted({recipe.cuisine for recipe in recipes})
         avg_minutes = round(sum(r.minutes for r in recipes) / len(recipes)) if recipes else 0
+        favorite_ids = set()
+        if session.get("user_id"):
+            favorite_ids = {f.recipe_id for f in Favorite.query.filter_by(user_id=session["user_id"]).all()}
         return render_template(
             "home.html",
             recipes=recipes,
@@ -134,39 +138,60 @@ def create_app():
             cuisine_count=len(cuisines),
             avg_minutes=avg_minutes,
             all_cuisines=cuisines,
+            favorite_ids=favorite_ids,
         )
 
     @app.route("/recipes")
     def recipes():
-        recipe_list = all_recipes()
+        # Query-level filtering: every filter below is applied as a SQL WHERE
+        # clause (via SQLAlchemy), rather than fetching every row and
+        # filtering with Python list comprehensions.
         query = request.args.get("q", "").strip().lower()
         cuisine = request.args.get("cuisine", "").strip()
         difficulty = request.args.get("difficulty", "").strip()
+        ingredient = request.args.get("ingredient", "").strip().lower()
         time_bucket = request.args.get("time", "").strip()
         sort = request.args.get("sort", "newest").strip()
 
+        recipe_query = Recipe.query.join(Category)
+
         if query:
-            recipe_list = [
-                recipe
-                for recipe in recipe_list
-                if query in recipe.title.lower()
-                or query in recipe.cuisine.lower()
-                or query in recipe.ingredients.lower()
-            ]
+            pattern = f"%{query}%"
+            recipe_query = recipe_query.filter(
+                or_(
+                    Recipe.title.ilike(pattern),
+                    Category.name.ilike(pattern),
+                    Recipe.ingredients.ilike(pattern),
+                )
+            )
         if cuisine:
-            recipe_list = [recipe for recipe in recipe_list if recipe.cuisine == cuisine]
+            recipe_query = recipe_query.filter(Category.name == cuisine)
         if difficulty:
-            recipe_list = [recipe for recipe in recipe_list if recipe.difficulty == difficulty]
-        if time_bucket:
-            recipe_list = [recipe for recipe in recipe_list if time_matches(recipe, time_bucket)]
+            recipe_query = recipe_query.filter(Recipe.difficulty == difficulty)
+        if ingredient:
+            recipe_query = recipe_query.filter(Recipe.ingredients.ilike(f"%{ingredient}%"))
+        if time_bucket == "under20":
+            recipe_query = recipe_query.filter(Recipe.minutes < 20)
+        elif time_bucket == "20to40":
+            recipe_query = recipe_query.filter(Recipe.minutes.between(20, 40))
+        elif time_bucket == "over40":
+            recipe_query = recipe_query.filter(Recipe.minutes > 40)
 
         if sort == "quickest":
-            recipe_list = sorted(recipe_list, key=lambda r: r.minutes)
+            recipe_query = recipe_query.order_by(Recipe.minutes.asc())
         elif sort == "az":
-            recipe_list = sorted(recipe_list, key=lambda r: r.title.lower())
+            recipe_query = recipe_query.order_by(Recipe.title.asc())
+        else:
+            recipe_query = recipe_query.order_by(Recipe.created_at.desc())
+
+        recipe_list = recipe_query.all()
 
         all_cuisines = sorted({recipe.cuisine for recipe in all_recipes()})
         all_difficulties = ["Easy", "Medium", "Project"]
+
+        favorite_ids = set()
+        if session.get("user_id"):
+            favorite_ids = {f.recipe_id for f in Favorite.query.filter_by(user_id=session["user_id"]).all()}
 
         return render_template(
             "recipes.html",
@@ -174,10 +199,12 @@ def create_app():
             query=query,
             cuisine=cuisine,
             difficulty=difficulty,
+            ingredient=ingredient,
             time_bucket=time_bucket,
             sort=sort,
             all_cuisines=all_cuisines,
             all_difficulties=all_difficulties,
+            favorite_ids=favorite_ids,
         )
 
     @app.route("/recipes/random")
@@ -237,7 +264,8 @@ def create_app():
     def favorites():
         favorite_rows = Favorite.query.filter_by(user_id=session["user_id"]).all()
         favorite_recipes = [row.recipe for row in favorite_rows]
-        return render_template("favorites.html", recipes=favorite_recipes)
+        favorite_ids = {row.recipe_id for row in favorite_rows}
+        return render_template("favorites.html", recipes=favorite_recipes, favorite_ids=favorite_ids)
 
     @app.route("/profile")
     @login_required
@@ -253,6 +281,49 @@ def create_app():
             favorite_recipes=favorite_recipes,
             review_count=len(review_rows),
         )
+
+    @app.route("/account", methods=["GET", "POST"])
+    @login_required
+    def account_settings():
+        user = User.query.get(session["user_id"])
+
+        if request.method == "POST":
+            form_type = request.form.get("form_type")
+
+            if form_type == "profile":
+                new_name = request.form.get("name", "").strip()
+                new_email = request.form.get("email", "").strip()
+                if not new_name or not new_email:
+                    flash("Name and email cannot be empty.", "error")
+                    return redirect(url_for("account_settings"))
+                try:
+                    user.name = new_name
+                    user.email = new_email
+                    db.session.commit()
+                    session["user_name"] = user.name
+                    flash("Profile updated.", "success")
+                except (SQLAlchemyError, ValueError):
+                    db.session.rollback()
+                    flash("Could not update profile - that email may already be in use.", "error")
+                return redirect(url_for("account_settings"))
+
+            if form_type == "password":
+                from werkzeug.security import check_password_hash, generate_password_hash
+
+                current_password = request.form.get("current_password", "")
+                new_password = request.form.get("new_password", "")
+                if not check_password_hash(user.password_hash, current_password):
+                    flash("Current password is incorrect.", "error")
+                    return redirect(url_for("account_settings"))
+                if len(new_password) < 6:
+                    flash("New password must be at least 6 characters.", "error")
+                    return redirect(url_for("account_settings"))
+                user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                flash("Password changed successfully.", "success")
+                return redirect(url_for("account_settings"))
+
+        return render_template("account.html", profile_user=user)
 
     @app.route("/recipes/<int:recipe_id>/review", methods=["POST"])
     @login_required

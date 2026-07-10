@@ -11,6 +11,7 @@
     <input type="hidden" name="difficulty" value="{{ difficulty }}">
     <input type="hidden" name="time" value="{{ time_bucket }}">
     <input name="q" value="{{ query }}" placeholder="Search pasta, rice, ginger...">
+    <input name="ingredient" value="{{ ingredient }}" placeholder="Filter by ingredient, e.g. garlic">
     <select name="sort" onchange="this.form.submit()">
       <option value="newest" {{ 'selected' if sort == 'newest' }}>Newest</option>
       <option value="quickest" {{ 'selected' if sort == 'quickest' }}>Quickest</option>
@@ -20,22 +21,22 @@
   </form>
 </section>
 <div class="filter-bar">
-  <a class="filter-chip {{ 'active' if not cuisine }}" href="{{ url_for('recipes', q=query, difficulty=difficulty, time=time_bucket, sort=sort) }}">All cuisines</a>
+  <a class="filter-chip {{ 'active' if not cuisine }}" href="{{ url_for('recipes', q=query, difficulty=difficulty, time=time_bucket, sort=sort, ingredient=ingredient) }}">All cuisines</a>
   {% for c in all_cuisines %}
-    <a class="filter-chip {{ 'active' if cuisine == c }}" href="{{ url_for('recipes', q=query, cuisine=c, difficulty=difficulty, time=time_bucket, sort=sort) }}">{{ c }}</a>
+    <a class="filter-chip {{ 'active' if cuisine == c }}" href="{{ url_for('recipes', q=query, cuisine=c, difficulty=difficulty, time=time_bucket, sort=sort, ingredient=ingredient) }}">{{ c }}</a>
   {% endfor %}
 </div>
 <div class="filter-bar">
-  <a class="filter-chip {{ 'active' if not difficulty }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, time=time_bucket, sort=sort) }}">All difficulties</a>
+  <a class="filter-chip {{ 'active' if not difficulty }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, time=time_bucket, sort=sort, ingredient=ingredient) }}">All difficulties</a>
   {% for d in all_difficulties %}
-    <a class="filter-chip {{ 'active' if difficulty == d }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=d, time=time_bucket, sort=sort) }}">{{ d }}</a>
+    <a class="filter-chip {{ 'active' if difficulty == d }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=d, time=time_bucket, sort=sort, ingredient=ingredient) }}">{{ d }}</a>
   {% endfor %}
 </div>
 <div class="filter-bar">
-  <a class="filter-chip {{ 'active' if not time_bucket }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, sort=sort) }}">Any time</a>
-  <a class="filter-chip {{ 'active' if time_bucket == 'under20' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='under20', sort=sort) }}">Under 20 min</a>
-  <a class="filter-chip {{ 'active' if time_bucket == '20to40' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='20to40', sort=sort) }}">20-40 min</a>
-  <a class="filter-chip {{ 'active' if time_bucket == 'over40' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='over40', sort=sort) }}">40+ min</a>
+  <a class="filter-chip {{ 'active' if not time_bucket }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, sort=sort, ingredient=ingredient) }}">Any time</a>
+  <a class="filter-chip {{ 'active' if time_bucket == 'under20' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='under20', sort=sort, ingredient=ingredient) }}">Under 20 min</a>
+  <a class="filter-chip {{ 'active' if time_bucket == '20to40' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='20to40', sort=sort, ingredient=ingredient) }}">20-40 min</a>
+  <a class="filter-chip {{ 'active' if time_bucket == 'over40' }}" href="{{ url_for('recipes', q=query, cuisine=cuisine, difficulty=difficulty, time='over40', sort=sort, ingredient=ingredient) }}">40+ min</a>
 </div>
 <section class="section">
   {% include "partials/recipe_table.html" %}

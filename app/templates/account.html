@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Account Settings | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-band compact">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Account Settings</h1>
+  </div>
+</section>
+<section class="split-layout">
+  <form class="panel form-panel" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_type" value="profile">
+    <h2>Profile Information</h2>
+    <label>Name <input name="name" value="{{ profile_user.name }}" required></label>
+    <label>Email <input type="email" name="email" value="{{ profile_user.email }}" required></label>
+    <button class="btn primary" type="submit">Save changes</button>
+  </form>
+  <form class="panel form-panel" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_type" value="password">
+    <h2>Change Password</h2>
+    <label>Current password <input type="password" name="current_password" required></label>
+    <label>New password <input type="password" name="new_password" minlength="6" required></label>
+    <button class="btn primary" type="submit">Update password</button>
+  </form>
+</section>
+{% endblock %}
