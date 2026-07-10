@@ -64,6 +64,14 @@
   <div class="recipe-grid">
     {% for recipe in recipes[:6] %}
       <article class="recipe-card">
+        {% if current_user %}
+          <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bookmark-btn {{ 'active' if recipe.id in favorite_ids }}" aria-label="Toggle favorite">
+              {{ ('&#9733;' if recipe.id in favorite_ids else '&#9734;') | safe }}
+            </button>
+          </form>
+        {% endif %}
         <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
           <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
           <div class="recipe-body">

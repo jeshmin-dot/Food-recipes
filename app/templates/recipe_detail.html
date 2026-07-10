@@ -15,7 +15,7 @@
       <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn {{ 'primary' if is_favorited else 'ghost' }}" type="submit">
-          {{ '&#9829; Favorited' if is_favorited else '&#9825; Add to favorites' | safe }}
+          {{ ('&#9829; Favorited' if is_favorited else '&#9825; Add to favorites') | safe }}
         </button>
       </form>
     {% endif %}

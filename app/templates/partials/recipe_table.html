@@ -17,6 +17,14 @@
           {% endfor %}
         </ul>
       </details>
+      {% if current_user %}
+        <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="bookmark-btn {{ 'active' if favorite_ids and recipe.id in favorite_ids }}" aria-label="Toggle favorite">
+            {{ ('&#9733;' if favorite_ids and recipe.id in favorite_ids else '&#9734;') | safe }}
+          </button>
+        </form>
+      {% endif %}
     </article>
   {% else %}
     <div class="empty-state-card">
