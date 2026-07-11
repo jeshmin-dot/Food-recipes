@@ -1,4 +1,4 @@
-import io
+﻿import io
 import os
 import sys
 import tempfile
@@ -8,11 +8,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def make_test_client():
+    # The app talks to MySQL in development/production (see config.py), but
+    # the test suite points DATABASE_URL at a throwaway SQLite file instead
+    # so `pytest` can run anywhere - CI, a laptop, this sandbox - without a
+    # MySQL server. See REPORT.md's "Testing" section for the reasoning.
     tmp_dir = tempfile.mkdtemp()
-    os.environ["DATABASE_PATH"] = os.path.join(tmp_dir, "test.db")
+    db_path = os.path.join(tmp_dir, "test.db")
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
     from app import create_app
+    from app.decorators import _reset_rate_limits
 
+    _reset_rate_limits()
     app = create_app()
     app.config["TESTING"] = True
     return app, app.test_client()
@@ -164,8 +171,8 @@ def test_edit_recipe_updates_fields():
         recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
     client.post(f"/recipes/{recipe_id}/edit", data=with_csrf(client, _recipe_form(title="Updated Soup")))
     with app.app_context():
-        from app.models import Recipe
-        assert Recipe.query.get(recipe_id).title == "Updated Soup"
+        from app.models import Recipe, db
+        assert db.session.get(Recipe, recipe_id).title == "Updated Soup"
 
 
 def test_non_owner_cannot_edit_recipe():
@@ -191,8 +198,8 @@ def test_delete_recipe_removes_it():
         recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
     client.post(f"/recipes/{recipe_id}/delete", data=with_csrf(client))
     with app.app_context():
-        from app.models import Recipe
-        assert Recipe.query.get(recipe_id) is None
+        from app.models import Recipe, db
+        assert db.session.get(Recipe, recipe_id) is None
 
 
 # ---------- Search ----------
@@ -260,3 +267,90 @@ def test_upload_saves_with_unique_filename(tmp_path):
     assert saved_name is not None
     assert saved_name != "photo.jpg"  # renamed, not the original filename
     assert (tmp_path / saved_name).exists()
+
+
+# ---------- Registration / auth hardening ----------
+
+def test_registration_rejects_short_password():
+    app, client = make_test_client()
+    response = client.post(
+        "/register",
+        data=with_csrf(client, {"name": "Ada", "email": "short@example.com", "password": "abc"}),
+    )
+    assert response.status_code == 200  # re-renders the form, no redirect
+    with app.app_context():
+        from app.models import User
+        assert User.query.filter_by(email="short@example.com").first() is None
+
+
+def test_login_rate_limited_after_repeated_attempts():
+    app, client = make_test_client()
+    client.post(
+        "/register",
+        data=with_csrf(client, {"name": "Ada", "email": "limited@example.com", "password": "secretpw"}),
+    )
+    last_response = None
+    for _ in range(10):
+        last_response = client.post(
+            "/login",
+            data=with_csrf(client, {"email": "limited@example.com", "password": "wrong-password"}),
+        )
+    assert last_response.status_code == 429
+
+
+# ---------- Reviews ----------
+
+def test_resubmitting_review_updates_instead_of_duplicating():
+    app, client = make_test_client()
+    _login_new_user(client, email="reviewer@example.com")
+    client.post("/dashboard", data=with_csrf(client, _recipe_form()))
+    with app.app_context():
+        from app.models import Recipe
+        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+
+    client.post(f"/recipes/{recipe_id}/review", data=with_csrf(client, {"rating": "3", "comment": "Okay"}))
+    client.post(f"/recipes/{recipe_id}/review", data=with_csrf(client, {"rating": "5", "comment": "Great!"}))
+
+    with app.app_context():
+        from app.models import Review
+        reviews = Review.query.filter_by(recipe_id=recipe_id).all()
+        assert len(reviews) == 1
+        assert reviews[0].rating == 5
+        assert reviews[0].comment == "Great!"
+
+
+# ---------- Uploaded file cleanup ----------
+
+def test_deleting_recipe_removes_its_uploaded_image(tmp_path, monkeypatch):
+    app, client = make_test_client()
+    monkeypatch.setattr(app, "static_folder", str(tmp_path))
+    (tmp_path / "uploads").mkdir()
+    image_path = tmp_path / "uploads" / "orphan-test.jpg"
+    image_path.write_bytes(b"fake image bytes")
+
+    _login_new_user(client, email="cleanup@example.com")
+    with app.app_context():
+        from app.models import Recipe, db
+        from app.database import get_or_create_category
+
+        category = get_or_create_category("Testland")
+        with client.session_transaction() as sess:
+            user_id = sess["user_id"]
+        recipe = Recipe(
+            title="Cleanup Soup",
+            description="desc",
+            category_id=category.id,
+            difficulty="Easy",
+            minutes=10,
+            servings=1,
+            image_url="/static/uploads/orphan-test.jpg",
+            ingredients="water",
+            steps="Boil.",
+            owner_id=user_id,
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        recipe_id = recipe.id
+
+    client.post(f"/recipes/{recipe_id}/delete", data=with_csrf(client))
+    assert not image_path.exists()

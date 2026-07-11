@@ -1,11 +1,11 @@
-<div class="recipe-table">
+﻿<div class="recipe-table">
   {% for recipe in recipes %}
     <article class="recipe-row">
-      <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+      <a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">
         <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
       </a>
       <div>
-        <h2><a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h2>
+        <h2><a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h2>
         <p>{{ recipe.description }}</p>
         <small>{{ recipe.cuisine }} / {{ recipe.difficulty }} / {{ recipe.minutes }} min</small>
       </div>
@@ -18,7 +18,7 @@
         </ul>
       </details>
       {% if current_user %}
-        <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form-inline">
+        <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="bookmark-btn {{ 'active' if favorite_ids and recipe.id in favorite_ids }}" aria-label="Toggle favorite">
             {{ ('&#9733;' if favorite_ids and recipe.id in favorite_ids else '&#9734;') | safe }}
@@ -30,7 +30,7 @@
     <div class="empty-state-card">
       <h2>No recipes found</h2>
       <p>Try a different search term, or clear your filters to see everything.</p>
-      <a class="btn primary" href="{{ url_for('recipes') }}">Clear filters</a>
+      <a class="btn primary" href="{{ url_for('recipes.recipes') }}">Clear filters</a>
     </div>
   {% endfor %}
 </div>

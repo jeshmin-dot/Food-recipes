@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Edit {{ recipe.title }} | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -33,7 +33,7 @@
     <label>Ingredients <textarea name="ingredients" required>{{ recipe.ingredients }}</textarea></label>
     <label>Steps <textarea name="steps" required>{{ recipe.steps }}</textarea></label>
     <button class="btn primary" type="submit">Save changes</button>
-    <a class="btn ghost" href="{{ url_for('dashboard') }}">Cancel</a>
+    <a class="btn ghost" href="{{ url_for('recipes.dashboard') }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

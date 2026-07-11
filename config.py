@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 from dotenv import load_dotenv
 
@@ -9,11 +9,28 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 APP_NAME = "Recipe Garden"
 SECRET_KEY = os.environ.get("SECRET_KEY", "recipe-garden-dev-key")
 
-DATABASE_PATH = os.environ.get(
-    "DATABASE_PATH", os.path.join(BASE_DIR, "instance", "recipe_garden.db")
-)
-
 DEBUG = os.environ.get("FLASK_DEBUG", "0") == "1"
+
+# --- Database -----------------------------------------------------------
+# MySQL is the persistence layer for this project (per the assignment's
+# required tech stack). Connection details come from individual env vars
+# so nothing sensitive needs to be committed, matching the existing
+# .env-based SECRET_KEY setup.
+#
+# DATABASE_URL can be set directly to override everything below - the
+# test suite uses this to point at a throwaway SQLite file instead, so
+# `pytest` can run anywhere without a MySQL server installed (see
+# tests/test_app.py and REPORT.md's "Testing" section for that trade-off).
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_PORT = os.environ.get("DB_PORT", "3306")
+DB_NAME = os.environ.get("DB_NAME", "recipe_garden")
+DB_USER = os.environ.get("DB_USER", "root")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

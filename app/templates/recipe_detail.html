@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ recipe.title }} | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -12,7 +12,7 @@
   <div class="recipe-actions no-print">
     <button type="button" class="btn ghost" onclick="window.print()">Print recipe</button>
     {% if current_user %}
-      <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}">
+      <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn {{ 'primary' if is_favorited else 'ghost' }}" type="submit">
           {{ ('&#9829; Favorited' if is_favorited else '&#9825; Add to favorites') | safe }}
@@ -44,7 +44,7 @@
         <li>{{ ingredient }}</li>
       {% endfor %}
     </ul>
-    <a class="btn ghost no-print" href="{{ url_for('recipes') }}">Back to all recipes</a>
+    <a class="btn ghost no-print" href="{{ url_for('recipes.recipes') }}">Back to all recipes</a>
   </aside>
 </section>
 {% if related %}
@@ -56,7 +56,7 @@
   <div class="recipe-grid">
     {% for r in related %}
       <article class="recipe-card">
-        <a href="{{ url_for('recipe_detail', recipe_id=r.id) }}">
+        <a href="{{ url_for('recipes.recipe_detail', recipe_id=r.id) }}">
           <img src="{{ r.image_url }}" alt="{{ r.title }}">
           <div class="recipe-body">
             <h3>{{ r.title }}</h3>
@@ -74,7 +74,7 @@
     <h2>Reviews</h2>
   </div>
   {% if current_user %}
-    <form class="panel form-panel" method="post" action="{{ url_for('add_review', recipe_id=recipe.id) }}">
+    <form class="panel form-panel" method="post" action="{{ url_for('recipes.add_review', recipe_id=recipe.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Rating
         <select name="rating" required>

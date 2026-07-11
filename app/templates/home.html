@@ -1,24 +1,24 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
     <p class="eyebrow">Seasonal recipe box</p>
     <h1>Recipe Garden</h1>
     <p>Collect colorful dishes, search by pantry ingredients, and cook with a focused step-by-step timer.</p>
-    <form class="search-form hero-search" method="get" action="{{ url_for('recipes') }}">
+    <form class="search-form hero-search" method="get" action="{{ url_for('recipes.recipes') }}">
       <input name="q" placeholder="Search pasta, rice, ginger...">
       <button class="btn primary" type="submit">Search</button>
     </form>
     <p class="hero-badge">{{ recipe_count }} recipes and growing</p>
     <div class="hero-actions">
-      <a class="btn primary" href="{{ url_for('recipes') }}">Browse recipes</a>
-      <a class="btn ghost" href="{{ url_for('dashboard') }}">Add a recipe</a>
-      <a class="btn ghost" href="{{ url_for('random_recipe') }}">&#127922; Surprise me</a>
+      <a class="btn primary" href="{{ url_for('recipes.recipes') }}">Browse recipes</a>
+      <a class="btn ghost" href="{{ url_for('recipes.dashboard') }}">Add a recipe</a>
+      <a class="btn ghost" href="{{ url_for('recipes.random_recipe') }}">&#127922; Surprise me</a>
     </div>
   </div>
   {% if featured %}
   <article class="hero-recipe">
-    <a href="{{ url_for('recipe_detail', recipe_id=featured.id) }}">
+    <a href="{{ url_for('recipes.recipe_detail', recipe_id=featured.id) }}">
       <img src="{{ featured.image_url }}" alt="{{ featured.title }}">
       <div>
         <span>{{ featured.minutes }} min</span>
@@ -41,7 +41,7 @@
   </div>
   <div class="category-grid">
     {% for c in all_cuisines %}
-      <a class="category-card" href="{{ url_for('recipes', cuisine=c) }}">
+      <a class="category-card" href="{{ url_for('recipes.recipes', cuisine=c) }}">
         <span class="category-icon">
           {% if "italian" in c.lower() %}??
           {% elif "japan" in c.lower() %}??
@@ -65,14 +65,14 @@
     {% for recipe in recipes[:6] %}
       <article class="recipe-card">
         {% if current_user %}
-          <form method="post" action="{{ url_for('toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form">
+          <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="bookmark-btn {{ 'active' if recipe.id in favorite_ids }}" aria-label="Toggle favorite">
               {{ ('&#9733;' if recipe.id in favorite_ids else '&#9734;') | safe }}
             </button>
           </form>
         {% endif %}
-        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+        <a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">
           <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
           <div class="recipe-body">
             <div class="meta">

@@ -1,23 +1,23 @@
-<header class="site-header">
-  <a class="brand" href="{{ url_for('home') }}">
+﻿<header class="site-header">
+  <a class="brand" href="{{ url_for('main.home') }}">
     <span class="brand-mark">RG</span>
     <span>{{ app_name }}</span>
   </a>
   <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
   <label for="nav-toggle" class="nav-toggle-btn" aria-label="Toggle navigation menu" tabindex="0">&#9776;</label>
   <nav class="nav" aria-label="Main navigation">
-    <a href="{{ url_for('home') }}" class="{{ 'active' if request.endpoint == 'home' }}" {{ 'aria-current="page"' if request.endpoint == 'home' else "" | safe }}>Home</a>
-    <a href="{{ url_for('recipes') }}" class="{{ 'active' if request.endpoint == 'recipes' }}" {{ 'aria-current="page"' if request.endpoint == 'recipes' else "" | safe }}>Recipes</a>
-    <a href="{{ url_for('cook_mode') }}" class="{{ 'active' if request.endpoint == 'cook_mode' }}" {{ 'aria-current="page"' if request.endpoint == 'cook_mode' else "" | safe }}>Cook Mode</a>
-    <a href="{{ url_for('cookies') }}" class="{{ 'active' if request.endpoint == 'cookies' }}" {{ 'aria-current="page"' if request.endpoint == 'cookies' else "" | safe }}>Pantry</a>
+    <a href="{{ url_for('main.home') }}" class="{{ 'active' if request.endpoint == 'home' }}" {{ 'aria-current="page"' if request.endpoint == 'home' else "" | safe }}>Home</a>
+    <a href="{{ url_for('recipes.recipes') }}" class="{{ 'active' if request.endpoint == 'recipes' }}" {{ 'aria-current="page"' if request.endpoint == 'recipes' else "" | safe }}>Recipes</a>
+    <a href="{{ url_for('main.cook_mode') }}" class="{{ 'active' if request.endpoint == 'cook_mode' }}" {{ 'aria-current="page"' if request.endpoint == 'cook_mode' else "" | safe }}>Cook Mode</a>
+    <a href="{{ url_for('main.cookies') }}" class="{{ 'active' if request.endpoint == 'cookies' }}" {{ 'aria-current="page"' if request.endpoint == 'cookies' else "" | safe }}>Pantry</a>
     {% if current_user %}
-      <a href="{{ url_for('meal_planner') }}" class="{{ 'active' if request.endpoint in ['meal_planner', 'shopping_list'] }}">Meal Planner</a>
-      <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">Profile</a>
-      <a href="{{ url_for('favorites') }}" class="{{ 'active' if request.endpoint == 'favorites' }}">Favorites</a>
-      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
-      <a href="{{ url_for('account_settings') }}" class="{{ 'active' if request.endpoint == 'account_settings' }}">Account</a>
+      <a href="{{ url_for('meal_planner.meal_planner') }}" class="{{ 'active' if request.endpoint in ['meal_planner', 'shopping_list'] }}">Meal Planner</a>
+      <a href="{{ url_for('account.profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">Profile</a>
+      <a href="{{ url_for('account.favorites') }}" class="{{ 'active' if request.endpoint == 'favorites' }}">Favorites</a>
+      <a href="{{ url_for('recipes.dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('account.account_settings') }}" class="{{ 'active' if request.endpoint == 'account_settings' }}">Account</a>
       {% if is_admin %}
-        <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin') }}">Admin</a>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin') }}">Admin</a>
       {% endif %}
       <a href="{{ url_for('auth.logout') }}">Logout</a>
     {% else %}

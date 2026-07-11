@@ -1,4 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
+﻿from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
 
 db = SQLAlchemy()
@@ -8,10 +8,10 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    email = db.Column(db.String, nullable=False, unique=True, index=True)
-    password_hash = db.Column(db.String, nullable=False)
-    role = db.Column(db.String, nullable=False, default="cook")
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default="cook")
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     recipes = db.relationship("Recipe", backref="owner", lazy=True)
@@ -30,7 +30,7 @@ class Category(db.Model):
     __tablename__ = "categories"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False, unique=True, index=True)
+    name = db.Column(db.String(100), nullable=False, unique=True, index=True)
 
     recipes = db.relationship("Recipe", backref="category", lazy=True)
 
@@ -39,15 +39,15 @@ class Recipe(db.Model):
     __tablename__ = "recipes"
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False, index=True)
     description = db.Column(db.Text, nullable=False)
-    difficulty = db.Column(db.String, nullable=False, index=True)
+    difficulty = db.Column(db.String(20), nullable=False, index=True)
     minutes = db.Column(db.Integer, nullable=False)
     servings = db.Column(db.Integer, nullable=False)
-    image_url = db.Column(db.String, nullable=False)
+    image_url = db.Column(db.String(500), nullable=False)
     ingredients = db.Column(db.Text, nullable=False)
     steps = db.Column(db.Text, nullable=False)
-    nutrition = db.Column(db.String, nullable=True)
+    nutrition = db.Column(db.String(255), nullable=True)
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False, index=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
@@ -98,7 +98,13 @@ class Review(db.Model):
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
-    __table_args__ = (db.CheckConstraint("rating >= 1 AND rating <= 5", name="rating_between_1_and_5"),)
+    __table_args__ = (
+        db.CheckConstraint("rating >= 1 AND rating <= 5", name="rating_between_1_and_5"),
+        # One review per user per recipe - resubmitting the review form
+        # updates the existing row instead of stacking duplicates that
+        # would skew Recipe.average_rating.
+        db.UniqueConstraint("user_id", "recipe_id", name="one_review_per_user_recipe"),
+    )
 
     @validates("rating")
     def validate_rating(self, key, value):
@@ -113,8 +119,8 @@ class MealPlanEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=False, index=True)
-    day_of_week = db.Column(db.String, nullable=False)
-    meal_type = db.Column(db.String, nullable=False)
+    day_of_week = db.Column(db.String(20), nullable=False)
+    meal_type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     user = db.relationship("User", backref="meal_plan_entries")

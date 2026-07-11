@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Manage Recipes | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -17,7 +17,7 @@
         <td>{{ recipe.cuisine }}</td>
         <td>{{ recipe.owner.name if recipe.owner else "-" }}</td>
         <td>
-          <form method="post" action="{{ url_for('admin_delete_recipe', recipe_id=recipe.id) }}">
+          <form method="post" action="{{ url_for('admin.admin_delete_recipe', recipe_id=recipe.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn ghost" type="submit" onclick="return confirm('Remove this recipe?');">Remove</button>
           </form>

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Admin | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -14,8 +14,8 @@
   <div><strong>{{ review_count }}</strong><span>Reviews</span></div>
 </section>
 <section class="section admin-links">
-  <a class="btn primary" href="{{ url_for('admin_users') }}">Manage Users</a>
-  <a class="btn primary" href="{{ url_for('admin_recipes') }}">Manage Recipes</a>
-  <a class="btn primary" href="{{ url_for('admin_reviews') }}">Manage Reviews</a>
+  <a class="btn primary" href="{{ url_for('admin.admin_users') }}">Manage Users</a>
+  <a class="btn primary" href="{{ url_for('admin.admin_recipes') }}">Manage Recipes</a>
+  <a class="btn primary" href="{{ url_for('admin.admin_reviews') }}">Manage Reviews</a>
 </section>
 {% endblock %}

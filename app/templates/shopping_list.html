@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Shopping List | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -6,7 +6,7 @@
     <p class="eyebrow">Ready to shop</p>
     <h1>Shopping List</h1>
   </div>
-  <a class="btn ghost" href="{{ url_for('meal_planner') }}">Back to meal planner</a>
+  <a class="btn ghost" href="{{ url_for('meal_planner.meal_planner') }}">Back to meal planner</a>
 </section>
 <section class="section">
   {% if has_plan %}
@@ -21,7 +21,7 @@
       {% endfor %}
     </ul>
   {% else %}
-    <p class="empty">Your meal plan is empty. <a href="{{ url_for('meal_planner') }}">Add some recipes</a> to generate a shopping list.</p>
+    <p class="empty">Your meal plan is empty. <a href="{{ url_for('meal_planner.meal_planner') }}">Add some recipes</a> to generate a shopping list.</p>
   {% endif %}
 </section>
 {% endblock %}

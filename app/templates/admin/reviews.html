@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Manage Reviews | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -18,7 +18,7 @@
         <td>{{ review.rating }}/5</td>
         <td>{{ review.comment or "" }}</td>
         <td>
-          <form method="post" action="{{ url_for('admin_delete_review', review_id=review.id) }}">
+          <form method="post" action="{{ url_for('admin.admin_delete_review', review_id=review.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn ghost" type="submit" onclick="return confirm('Remove this review?');">Remove</button>
           </form>

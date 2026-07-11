@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ error_title or "Something went wrong" }} - {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
   <div>
     <h1>{{ error_title or "Something went wrong" }}</h1>
     <p>{{ error_message or "Please try again in a moment." }}</p>
-    <a class="btn primary" href="{{ url_for('home') }}">Back to the garden</a>
+    <a class="btn primary" href="{{ url_for('main.home') }}">Back to the garden</a>
   </div>
 </section>
 {% endblock %}

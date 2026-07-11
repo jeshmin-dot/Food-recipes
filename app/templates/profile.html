@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}My Profile | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -16,7 +16,7 @@
   <div class="recipe-grid">
     {% for recipe in uploaded_recipes %}
       <article class="recipe-card">
-        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+        <a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">
           <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
           <div class="recipe-body">
             <div class="meta">
@@ -32,7 +32,7 @@
         </a>
       </article>
     {% else %}
-      <p class="empty">You haven't added any recipes yet. <a href="{{ url_for('dashboard') }}">Add your first one</a>.</p>
+      <p class="empty">You haven't added any recipes yet. <a href="{{ url_for('recipes.dashboard') }}">Add your first one</a>.</p>
     {% endfor %}
   </div>
 </section>
@@ -44,7 +44,7 @@
   <div class="recipe-grid">
     {% for recipe in favorite_recipes %}
       <article class="recipe-card">
-        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+        <a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">
           <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
           <div class="recipe-body">
             <div class="meta">
@@ -60,7 +60,7 @@
         </a>
       </article>
     {% else %}
-      <p class="empty">No favorites yet. <a href="{{ url_for('recipes') }}">Browse recipes</a> to find some.</p>
+      <p class="empty">No favorites yet. <a href="{{ url_for('recipes.recipes') }}">Browse recipes</a> to find some.</p>
     {% endfor %}
   </div>
 </section>

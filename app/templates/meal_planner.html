@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Meal Planner | {{ app_name }}{% endblock %}
 {% block content %}
 <section class="page-band compact">
@@ -6,7 +6,7 @@
     <p class="eyebrow">Plan ahead</p>
     <h1>Weekly Meal Planner</h1>
   </div>
-  <a class="btn ghost" href="{{ url_for('shopping_list') }}">View shopping list</a>
+  <a class="btn ghost" href="{{ url_for('meal_planner.shopping_list') }}">View shopping list</a>
 </section>
 <section class="section">
   <form method="post">
