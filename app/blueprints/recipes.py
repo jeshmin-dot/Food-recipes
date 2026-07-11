@@ -68,7 +68,7 @@ def _pdf_text(value):
         "‘": "'", "’": "'",
         "“": '"', "”": '"',
         "–": "-", "—": "-",
-        "…": "...", " ": " ",
+        "…": "...", " ": " ",
         "•": "-",
     }
     for bad, good in replacements.items():
@@ -98,6 +98,7 @@ def recipes():
     difficulty = request.args.get("difficulty", "").strip()
     ingredient = request.args.get("ingredient", "").strip().lower()
     time_bucket = request.args.get("time", "").strip()
+    calorie_bucket = request.args.get("calories", "").strip()
     sort = request.args.get("sort", "newest").strip()
 
     recipe_query = Recipe.query.join(Category)
@@ -124,6 +125,13 @@ def recipes():
     elif time_bucket == "over40":
         recipe_query = recipe_query.filter(Recipe.minutes > 40)
 
+    if calorie_bucket == "under300":
+        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories < 300)
+    elif calorie_bucket == "300to600":
+        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories.between(300, 600))
+    elif calorie_bucket == "over600":
+        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories > 600)
+
     if sort == "quickest":
         recipe_query = recipe_query.order_by(Recipe.minutes.asc())
     elif sort == "az":
@@ -148,6 +156,7 @@ def recipes():
         difficulty=difficulty,
         ingredient=ingredient,
         time_bucket=time_bucket,
+        calorie_bucket=calorie_bucket,
         sort=sort,
         all_cuisines=all_cuisines,
         all_difficulties=all_difficulties,
@@ -256,7 +265,7 @@ def add_review(recipe_id):
 def dashboard():
     if request.method == "POST":
         image_url = resolve_recipe_image(request.form, request.files)
-        minutes, servings, error = validate_recipe_form(request.form, require_image=not image_url)
+        minutes, servings, calories, error = validate_recipe_form(request.form, require_image=not image_url)
 
         if error:
             flash(error, "error")
@@ -275,6 +284,7 @@ def dashboard():
                 ingredients=request.form["ingredients"],
                 steps=request.form["steps"],
                 nutrition=request.form.get("nutrition", "").strip() or None,
+                calories=calories,
                 owner_id=session["user_id"],
             )
             db.session.add(recipe)
@@ -311,7 +321,7 @@ def edit_recipe(recipe_id):
 
     if request.method == "POST":
         new_image = resolve_recipe_image(request.form, request.files)
-        minutes, servings, error = validate_recipe_form(request.form, require_image=False)
+        minutes, servings, calories, error = validate_recipe_form(request.form, require_image=False)
 
         if error:
             flash(error, "error")
@@ -331,6 +341,7 @@ def edit_recipe(recipe_id):
             recipe.ingredients = request.form["ingredients"]
             recipe.steps = request.form["steps"]
             recipe.nutrition = request.form.get("nutrition", "").strip() or None
+            recipe.calories = calories
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()

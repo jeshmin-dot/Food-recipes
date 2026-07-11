@@ -22,7 +22,10 @@
     </div>
     <label>Upload an image <input type="file" name="image_file" accept=".png,.jpg,.jpeg,.gif,.webp"></label>
     <label>...or paste an image URL <input name="image_url" placeholder="https://..."></label>
-    <label>Nutrition <input name="nutrition" placeholder="420 kcal, 18g protein"></label>
+    <div class="form-row">
+      <label>Nutrition <input name="nutrition" placeholder="420 kcal, 18g protein"></label>
+      <label>Calories (optional) <input type="number" name="calories" min="0" placeholder="420"></label>
+    </div>
     <label>Ingredients <textarea name="ingredients" required placeholder="One ingredient per line"></textarea></label>
     <label>Steps <textarea name="steps" required placeholder="One step per line"></textarea></label>
     <button class="btn primary" type="submit">Save recipe</button>

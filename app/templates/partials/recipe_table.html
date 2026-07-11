@@ -1,15 +1,38 @@
-﻿<div class="recipe-table">
+﻿<div class="recipe-grid">
   {% for recipe in recipes %}
-    <article class="recipe-row">
+    <article class="recipe-card">
+      {% if current_user %}
+        <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="bookmark-btn {{ 'active' if favorite_ids and recipe.id in favorite_ids }}" aria-label="Toggle favorite">
+            {{ ('&#9733;' if favorite_ids and recipe.id in favorite_ids else '&#9734;') | safe }}
+          </button>
+        </form>
+      {% endif %}
       <a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">
         <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+        <div class="recipe-body">
+          <div class="meta">
+            <span>{{ recipe.cuisine }}</span>
+            <span>{{ recipe.difficulty }}</span>
+          </div>
+          <h3>{{ recipe.title }}</h3>
+          <p class="card-description">{{ recipe.description }}</p>
+          <div class="stats">
+            <span>{{ recipe.minutes }} min</span>
+            <span>{{ recipe.servings }} servings</span>
+          </div>
+          <div class="badge-row">
+            {% if recipe.average_rating %}
+              <span class="badge badge-rating">&#9733; {{ recipe.average_rating }}</span>
+            {% endif %}
+            {% if recipe.calories %}
+              <span class="badge badge-calories">{{ recipe.calories }} kcal</span>
+            {% endif %}
+          </div>
+        </div>
       </a>
-      <div>
-        <h2><a href="{{ url_for('recipes.recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h2>
-        <p>{{ recipe.description }}</p>
-        <small>{{ recipe.cuisine }} / {{ recipe.difficulty }} / {{ recipe.minutes }} min</small>
-      </div>
-      <details>
+      <details class="card-ingredients">
         <summary>Ingredients</summary>
         <ul>
           {% for ingredient in recipe.ingredients.split("\n") %}
@@ -17,14 +40,6 @@
           {% endfor %}
         </ul>
       </details>
-      {% if current_user %}
-        <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}" class="bookmark-form-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="bookmark-btn {{ 'active' if favorite_ids and recipe.id in favorite_ids }}" aria-label="Toggle favorite">
-            {{ ('&#9733;' if favorite_ids and recipe.id in favorite_ids else '&#9734;') | safe }}
-          </button>
-        </form>
-      {% endif %}
     </article>
   {% else %}
     <div class="empty-state-card">

@@ -354,3 +354,87 @@ def test_deleting_recipe_removes_its_uploaded_image(tmp_path, monkeypatch):
 
     client.post(f"/recipes/{recipe_id}/delete", data=with_csrf(client))
     assert not image_path.exists()
+
+
+# ---------- Calories (optional field + search filter) ----------
+
+def test_add_recipe_with_calories_saves_value():
+    app, client = make_test_client()
+    _login_new_user(client)
+    client.post("/dashboard", data=with_csrf(client, _recipe_form(calories="410")))
+    with app.app_context():
+        from app.models import Recipe
+        recipe = Recipe.query.filter_by(title="Test Soup").first()
+        assert recipe.calories == 410
+
+
+def test_add_recipe_without_calories_still_works():
+    # Calories is optional - omitting it entirely must not block saving,
+    # since older recipes and quick entries won't always have it.
+    app, client = make_test_client()
+    _login_new_user(client, email="nocal@example.com")
+    client.post("/dashboard", data=with_csrf(client, _recipe_form()))
+    with app.app_context():
+        from app.models import Recipe
+        recipe = Recipe.query.filter_by(title="Test Soup").first()
+        assert recipe.calories is None
+
+
+def test_add_recipe_rejects_negative_calories():
+    app, client = make_test_client()
+    _login_new_user(client, email="negcal@example.com")
+    client.post("/dashboard", data=with_csrf(client, _recipe_form(title="Bad Cal Soup", calories="-5")))
+    with app.app_context():
+        from app.models import Recipe
+        assert Recipe.query.filter_by(title="Bad Cal Soup").first() is None
+
+
+def test_calorie_filter_narrows_results():
+    app, client = make_test_client()
+    _login_new_user(client)
+    client.post("/dashboard", data=with_csrf(client, _recipe_form(title="Light Salad", calories="200")))
+    client.post("/dashboard", data=with_csrf(client, _recipe_form(title="Heavy Roast", calories="900")))
+
+    response = client.get("/recipes?calories=under300")
+    assert response.status_code == 200
+    assert b"Light Salad" in response.data
+    assert b"Heavy Roast" not in response.data
+
+
+# ---------- PDF download ----------
+# These two were the exact gap that let a real crash reach the browser
+# before it was caught by anything automated - see _break_long_words()
+# and _write_line() in app/blueprints/recipes.py for the fixes they cover.
+
+def test_download_recipe_pdf_returns_pdf():
+    app, client = make_test_client()
+    _login_new_user(client)
+    client.post("/dashboard", data=with_csrf(client, _recipe_form()))
+    with app.app_context():
+        from app.models import Recipe
+        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+
+    response = client.get(f"/recipes/{recipe_id}/download")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data[:4] == b"%PDF"
+
+
+def test_download_recipe_pdf_handles_long_unbroken_field():
+    # Regression test: a recipe field with one long run of characters and
+    # no spaces (e.g. the free-text Cuisine box) used to crash FPDF
+    # entirely with "Not enough horizontal space to render a single
+    # character" instead of wrapping the line.
+    app, client = make_test_client()
+    _login_new_user(client, email="longword@example.com")
+    client.post(
+        "/dashboard",
+        data=with_csrf(client, _recipe_form(title="Long Word Soup", cuisine="a" * 200)),
+    )
+    with app.app_context():
+        from app.models import Recipe
+        recipe_id = Recipe.query.filter_by(title="Long Word Soup").first().id
+
+    response = client.get(f"/recipes/{recipe_id}/download")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"

@@ -12,9 +12,14 @@ here before submission]*
 
 ## Features
 
-- Browse, search, and filter recipes by cuisine, difficulty, and cooking time
+- Browse, search, and filter recipes by cuisine, difficulty, cooking time,
+  and calories
 - Sort recipes (newest, quickest, A-Z)
-- Recipe detail pages with nutrition info, ratings, reviews, and related recipes
+- Recipe cards with a bookmark toggle, star rating badge, and calorie badge
+- Recipe detail pages with nutrition info, an interactive ingredient
+  checklist, ratings, reviews, and related recipes
+- Download any recipe as a standalone PDF, or share its link (native share
+  sheet on mobile, copy-to-clipboard elsewhere)
 - User accounts: registration, secure login (hashed passwords), sessions
 - Add, edit, and delete your own recipes, with image upload or URL
 - Favorite recipes and leave star ratings + written reviews (one review per
@@ -22,7 +27,6 @@ here before submission]*
 - Weekly meal planner with an auto-generated shopping list
 - User profile page (your recipes + your favorites)
 - Admin panel: manage users, recipes, and reviews
-- Dark mode (saved to your browser)
 - Responsive layout with a mobile navigation menu
 - CSRF protection, role-based access control, secure file upload validation,
   rate-limited login/register forms
@@ -97,6 +101,17 @@ Food-recipes/
 
 The tables are created automatically on first run (via `db.create_all()`)
 and seeded with a few starter recipes.
+
+### Migrating an existing database
+
+`db.create_all()` only creates tables that don't exist yet - it will not
+add a new column to a `recipes` table that's already there from an earlier
+run. If you already had this app running against MySQL before the
+`calories` column was added, run this once against your existing database:
+
+```sql
+ALTER TABLE recipes ADD COLUMN calories INT NULL;
+```
 
 ## Running tests
 

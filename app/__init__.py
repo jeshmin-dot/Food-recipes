@@ -1,4 +1,5 @@
-﻿import secrets
+﻿import os
+import secrets
 from datetime import datetime
 
 from flask import Flask, abort, render_template, request, session
@@ -18,7 +19,14 @@ def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY
     app.config["DEBUG"] = config.DEBUG
-    app.config["SQLALCHEMY_DATABASE_URI"] = config.DATABASE_URL
+    # Read DATABASE_URL from the live environment on every call, not just
+    # config.DATABASE_URL (a value computed once, the first time the config
+    # module is imported). Without this, calling create_app() more than
+    # once in the same process - which is exactly what the test suite does,
+    # once per test, each pointed at its own throwaway SQLite file - would
+    # keep reusing whichever database URL was in effect the first time
+    # config.py loaded, silently sharing one database across every test.
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", config.DATABASE_URL)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
     app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE

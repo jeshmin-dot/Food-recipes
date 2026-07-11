@@ -1,4 +1,4 @@
-from app.models import Category, Recipe, db
+﻿from app.models import Category, Recipe, db
 
 
 def create_tables():
@@ -34,6 +34,7 @@ def seed_recipes():
             ingredients="spaghetti\nlemon zest\nbasil\ngarlic\nolive oil\nparmesan\nbreadcrumbs",
             steps="Boil pasta until just tender.\nToast crumbs with garlic and oil.\nToss pasta with lemon, basil, and parmesan.\nFinish with crumbs and black pepper.",
             nutrition="480 kcal, 16g protein, 62g carbs",
+            calories=480,
         ),
         Recipe(
             title="Miso Maple Bowls",
@@ -46,6 +47,7 @@ def seed_recipes():
             ingredients="rice\ntofu\nmiso paste\nmaple syrup\nbroccoli\ncarrots\nsesame seeds",
             steps="Cook rice and keep warm.\nRoast vegetables and tofu until golden.\nWhisk miso, maple, soy sauce, and lime.\nSpoon glaze over bowls and scatter sesame seeds.",
             nutrition="540 kcal, 22g protein, 70g carbs",
+            calories=540,
         ),
         Recipe(
             title="Coconut Chickpea Stew",
@@ -58,6 +60,7 @@ def seed_recipes():
             ingredients="chickpeas\ncoconut milk\ntomatoes\nginger\nspinach\nonion\nchili flakes",
             steps="Soften onion with ginger and chili.\nAdd tomatoes, chickpeas, and coconut milk.\nSimmer until thick.\nFold in spinach and serve with rice or flatbread.",
             nutrition="390 kcal, 12g protein, 45g carbs",
+            calories=390,
         ),
     ]
     db.session.add_all(recipes)

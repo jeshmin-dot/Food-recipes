@@ -10,7 +10,8 @@
     {% endif %}
   </div>
   <div class="recipe-actions no-print">
-    <button type="button" class="btn ghost" onclick="window.print()">Print recipe</button>
+    <a class="btn ghost" href="{{ url_for('recipes.download_recipe_pdf', recipe_id=recipe.id) }}">Download recipe (PDF)</a>
+    <button type="button" class="btn ghost" data-share-button data-share-title="{{ recipe.title }}" data-share-url="{{ request.url }}">Share</button>
     {% if current_user %}
       <form method="post" action="{{ url_for('recipes.toggle_favorite', recipe_id=recipe.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -28,6 +29,7 @@
     <div class="stats">
       <span>{{ recipe.minutes }} min</span>
       <span>{{ recipe.servings }} servings</span>
+      {% if recipe.calories %}<span>{{ recipe.calories }} kcal</span>{% endif %}
       {% if recipe.nutrition %}<span>{{ recipe.nutrition }}</span>{% endif %}
     </div>
     <h2>Steps</h2>
@@ -39,9 +41,16 @@
   </article>
   <aside class="panel">
     <h2>Ingredients</h2>
-    <ul class="simple-list">
+    <ul class="ingredient-checklist" data-ingredient-checklist>
       {% for ingredient in recipe.ingredients.split("\n") %}
-        <li>{{ ingredient }}</li>
+        {% if ingredient.strip() %}
+          <li>
+            <label>
+              <input type="checkbox">
+              <span>{{ ingredient }}</span>
+            </label>
+          </li>
+        {% endif %}
       {% endfor %}
     </ul>
     <a class="btn ghost no-print" href="{{ url_for('recipes.recipes') }}">Back to all recipes</a>

@@ -35,8 +35,11 @@ def resolve_recipe_image(form, files):
 def validate_recipe_form(form, require_image):
     """Shared validation for both the add and edit recipe forms.
 
-    Returns (minutes, servings, error_message). error_message is None
-    when everything's valid; minutes/servings are None if invalid.
+    Returns (minutes, servings, calories, error_message). error_message is
+    None when everything's valid; the other three are None if invalid.
+    Calories is optional - an empty field is fine and stored as None, but
+    a value that isn't a non-negative whole number is rejected rather than
+    silently dropped, so a typo doesn't quietly save as "no data".
     """
     missing = [field for field in REQUIRED_RECIPE_FIELDS if not form.get(field, "").strip()]
     try:
@@ -45,12 +48,23 @@ def validate_recipe_form(form, require_image):
     except ValueError:
         minutes = servings = None
 
+    calories_raw = form.get("calories", "").strip()
+    calories = None
+    calories_invalid = False
+    if calories_raw:
+        try:
+            calories = int(calories_raw)
+            if calories < 0:
+                calories_invalid = True
+        except ValueError:
+            calories_invalid = True
+
     if require_image and not form.get("image_url", "").strip():
         missing.append("image")
 
-    if missing or minutes is None:
-        return None, None, "Please fill in every field with valid values before saving."
-    return minutes, servings, None
+    if missing or minutes is None or calories_invalid:
+        return None, None, None, "Please fill in every field with valid values before saving."
+    return minutes, servings, calories, None
 
 
 def delete_uploaded_image(image_url):

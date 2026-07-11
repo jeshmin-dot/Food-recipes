@@ -48,6 +48,10 @@ class Recipe(db.Model):
     ingredients = db.Column(db.Text, nullable=False)
     steps = db.Column(db.Text, nullable=False)
     nutrition = db.Column(db.String(255), nullable=True)
+    # Optional: lets the search page offer a calorie filter. Nullable so
+    # recipes added before this column existed (and anyone who leaves the
+    # field blank) don't break - "no data" is a valid state, not an error.
+    calories = db.Column(db.Integer, nullable=True)
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False, index=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
@@ -58,12 +62,19 @@ class Recipe(db.Model):
     __table_args__ = (
         db.CheckConstraint("minutes > 0", name="minutes_must_be_positive"),
         db.CheckConstraint("servings > 0", name="servings_must_be_positive"),
+        db.CheckConstraint("calories IS NULL OR calories >= 0", name="calories_must_not_be_negative"),
     )
 
     @validates("minutes", "servings")
     def validate_positive(self, key, value):
         if value is None or value <= 0:
             raise ValueError(f"{key} must be a positive number.")
+        return value
+
+    @validates("calories")
+    def validate_calories(self, key, value):
+        if value is not None and value < 0:
+            raise ValueError("Calories cannot be negative.")
         return value
 
     @property

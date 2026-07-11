@@ -1,4 +1,4 @@
-const timerDisplay = document.querySelector("#timer");
+﻿const timerDisplay = document.querySelector("#timer");
 const startButton = document.querySelector("[data-timer-start]");
 const resetButton = document.querySelector("[data-timer-reset]");
 
@@ -82,4 +82,50 @@ renderTimer();
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   }
+})();
+
+// Share button: native Web Share API where the browser supports it,
+// falling back to copying the link to the clipboard (and a plain prompt()
+// if even that isn't available) so the button always does something useful.
+(function () {
+  document.querySelectorAll("[data-share-button]").forEach(function (button) {
+    button.addEventListener("click", async function () {
+      const title = button.dataset.shareTitle || document.title;
+      const url = button.dataset.shareUrl || window.location.href;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: title, url: url });
+        } catch (err) {
+          // User closed the share sheet without picking anything - fine.
+        }
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(url);
+        const original = button.textContent;
+        button.textContent = "Link copied!";
+        setTimeout(function () {
+          button.textContent = original;
+        }, 2000);
+      } catch (err) {
+        window.prompt("Copy this link:", url);
+      }
+    });
+  });
+})();
+
+// Ingredient checklist: strike through an ingredient once it's checked off.
+// Purely a visual aid while cooking - nothing is saved, so refreshing the
+// page resets it.
+(function () {
+  document.querySelectorAll("[data-ingredient-checklist] input[type='checkbox']").forEach(function (checkbox) {
+    checkbox.addEventListener("change", function () {
+      const item = checkbox.closest("li");
+      if (item) {
+        item.classList.toggle("checked", checkbox.checked);
+      }
+    });
+  });
 })();

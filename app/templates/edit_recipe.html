@@ -29,7 +29,10 @@
     <p>Current image: <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" style="max-width:120px;border-radius:8px;"></p>
     <label>Upload a new image (optional) <input type="file" name="image_file" accept=".png,.jpg,.jpeg,.gif,.webp"></label>
     <label>...or paste a new image URL <input name="image_url" placeholder="Leave blank to keep current image"></label>
-    <label>Nutrition <input name="nutrition" value="{{ recipe.nutrition or '' }}" placeholder="420 kcal, 18g protein"></label>
+    <div class="form-row">
+      <label>Nutrition <input name="nutrition" value="{{ recipe.nutrition or '' }}" placeholder="420 kcal, 18g protein"></label>
+      <label>Calories (optional) <input type="number" name="calories" min="0" value="{{ recipe.calories if recipe.calories is not none else '' }}" placeholder="420"></label>
+    </div>
     <label>Ingredients <textarea name="ingredients" required>{{ recipe.ingredients }}</textarea></label>
     <label>Steps <textarea name="steps" required>{{ recipe.steps }}</textarea></label>
     <button class="btn primary" type="submit">Save changes</button>
