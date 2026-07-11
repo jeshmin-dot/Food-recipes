@@ -1,8 +1,14 @@
-# Recipe Garden
+ï»¿# Recipe Garden
 
 A full-featured Flask recipe website: browse, search, and filter recipes,
 save favorites, leave reviews, plan meals for the week, and generate a
-shopping list from your plan. Built incrementally as a learning project.
+shopping list from your plan. Built incrementally as a learning project for
+module RTW504CA1 (The Internet and Web Technologies).
+
+**Report:** see [REPORT.md](REPORT.md) for architecture/database diagrams,
+security measures, and design decisions.
+**Video demonstration:** *[add your unlisted YouTube / Google Drive link
+here before submission]*
 
 ## Features
 
@@ -11,39 +17,51 @@ shopping list from your plan. Built incrementally as a learning project.
 - Recipe detail pages with nutrition info, ratings, reviews, and related recipes
 - User accounts: registration, secure login (hashed passwords), sessions
 - Add, edit, and delete your own recipes, with image upload or URL
-- Favorite recipes and leave star ratings + written reviews
+- Favorite recipes and leave star ratings + written reviews (one review per
+  recipe - resubmitting updates it rather than stacking duplicates)
 - Weekly meal planner with an auto-generated shopping list
 - User profile page (your recipes + your favorites)
 - Admin panel: manage users, recipes, and reviews
 - Dark mode (saved to your browser)
 - Responsive layout with a mobile navigation menu
-- CSRF protection, role-based access control, secure file upload validation
+- CSRF protection, role-based access control, secure file upload validation,
+  rate-limited login/register forms
 
 ## Project structure
 
 ```text
 Food-recipes/
 +-- app/
-¦   +-- __init__.py          # App factory: all routes live here
-¦   +-- models.py             # User, Recipe, Category, Favorite, Review, MealPlanEntry
-¦   +-- database.py           # Connection helper + category lookup
-¦   +-- utils.py              # Secure image upload validation
-¦   +-- controllers/
-¦   ¦   +-- database.py         # initialize_database()
-¦   ¦   +-- authcontroller.py   # User creation / login verification
-¦   +-- routes/
-¦   ¦   +-- authroutes.py       # /login, /register, /logout
-¦   +-- templates/             # Jinja templates (incl. admin/ subfolder)
-¦   +-- static/
-¦       +-- css/style.css
-¦       +-- js/app.js
-¦       +-- uploads/            # User-uploaded recipe images (not committed)
+|   +-- __init__.py           # Thin app factory: config + blueprint registration
+|   +-- constants.py           # DAYS, MEALS, REQUIRED_RECIPE_FIELDS
+|   +-- decorators.py          # login_required, admin_required, rate_limit
+|   +-- services.py            # Shared helpers used by more than one blueprint
+|   +-- models.py              # User, Recipe, Category, Favorite, Review, MealPlanEntry
+|   +-- database.py            # Connection helper + category lookup
+|   +-- utils.py               # Secure image upload validation
+|   +-- controllers/
+|   |   +-- database.py         # initialize_database()
+|   |   +-- authcontroller.py   # User creation / login verification
+|   +-- routes/
+|   |   +-- authroutes.py       # /login, /register, /logout, /forgot-password
+|   +-- blueprints/
+|   |   +-- main.py             # Home page, cook mode, pantry preferences
+|   |   +-- recipes.py          # Browse/search, detail, add/edit/delete, favorites, reviews
+|   |   +-- account.py          # Profile, account settings, favorites list
+|   |   +-- meal_planner.py     # Weekly planner + shopping list
+|   |   +-- admin.py            # User/recipe/review management
+|   +-- templates/             # Jinja templates (incl. admin/ subfolder)
+|   +-- static/
+|       +-- css/style.css
+|       +-- js/app.js
+|       +-- uploads/            # User-uploaded recipe images (not committed)
 +-- tests/
-¦   +-- test_app.py           # Registration, login, CRUD, search, security, upload tests
-+-- config.py                 # Reads settings from environment / .env
-+-- app.py, run.py            # Entry points
+|   +-- test_app.py            # Registration, login, CRUD, search, security, upload tests
++-- config.py                  # Reads settings from environment / .env
++-- app.py, run.py             # Entry points
 +-- requirements.txt
-+-- .env.example               # Copy to .env and fill in real values
++-- .env.example                # Copy to .env and fill in real values
++-- REPORT.md                   # Coursework report (architecture, DB, security)
 +-- README.md
 ```
 
@@ -59,20 +77,32 @@ Food-recipes/
 ```bash
    pip install -r requirements.txt
 ```
-3. Copy `.env.example` to `.env` and set a real `SECRET_KEY`:
+3. Install MySQL locally (or use one already running) and create the
+   database - MySQL doesn't auto-create it the way SQLite auto-created a
+   file:
+```sql
+   CREATE DATABASE recipe_garden;
+```
+4. Copy `.env.example` to `.env`, set a real `SECRET_KEY`, and fill in your
+   MySQL connection details (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
+   `DB_PASSWORD`):
 ```bash
    python -c "import secrets; print(secrets.token_hex(32))"
 ```
-4. Run the app:
+5. Run the app:
 ```bash
    python app.py
 ```
-5. Open `http://127.0.0.1:5000`
+6. Open `http://127.0.0.1:5000`
 
-The database is created automatically on first run and seeded with a few
-starter recipes.
+The tables are created automatically on first run (via `db.create_all()`)
+and seeded with a few starter recipes.
 
 ## Running tests
+
+The test suite points itself at a throwaway SQLite file instead of MySQL,
+so it can run without a MySQL server available (see REPORT.md's "Testing"
+notes) - you don't need step 3/4 above just to run `pytest`.
 
 ```bash
 pip install pytest
@@ -81,6 +111,7 @@ python -m pytest tests/test_app.py -v
 
 ## Notes
 
-- `instance/recipe_garden.db` and `.env` are intentionally not committed
-  (see `.gitignore`) - they're local/generated, not source code.
-- Uploaded images live in `app/static/uploads/` and are also not committed.
+- `.env` is intentionally not committed (see `.gitignore`) - it holds
+  local secrets and MySQL credentials, not source code.
+- Uploaded images live in `app/static/uploads/` and are also not committed;
+  deleting or replacing a recipe's image cleans up the old file on disk.
