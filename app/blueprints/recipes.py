@@ -1,6 +1,21 @@
 ﻿import random
+import re
+from io import BytesIO
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -16,6 +31,61 @@ from app.services import (
 )
 
 recipes_bp = Blueprint("recipes", __name__)
+
+
+_LONG_WORD_RE = re.compile(r"\S{40,}")
+
+
+def _break_long_words(text, chunk=40):
+    """FPDF's word-wrap only knows how to break a line at a space. If a
+    recipe field ever contains one long unbroken run of characters (a
+    pasted URL, or just text typed/pasted with no spaces) that is wider
+    than the page, multi_cell() cannot find anywhere to break it and
+    raises "Not enough horizontal space to render a single character"
+    instead of wrapping. Insert a breathing space every `chunk`
+    characters inside any such run so there is always somewhere to wrap,
+    without touching normal, already-spaced text."""
+
+    def _splitter(match):
+        word = match.group(0)
+        return " ".join(word[i : i + chunk] for i in range(0, len(word), chunk))
+
+    return _LONG_WORD_RE.sub(_splitter, text)
+
+
+def _pdf_text(value):
+    """FPDF's built-in Helvetica font can only render Windows-1252
+    characters. Recipe text typed on a phone or copy-pasted from a word
+    processor or recipe website often contains "smart" quotes, en/em
+    dashes, or bullet characters outside that range, which raises an
+    encoding error and crashes the whole request. Normalise the common
+    ones to plain ASCII first, then drop anything else that still can't
+    be represented, and break up any long unbroken run of characters, so
+    PDF generation can never 500 regardless of what a recipe contains."""
+    if not value:
+        return ""
+    replacements = {
+        "‘": "'", "’": "'",
+        "“": '"', "”": '"',
+        "–": "-", "—": "-",
+        "…": "...", " ": " ",
+        "•": "-",
+    }
+    for bad, good in replacements.items():
+        value = value.replace(bad, good)
+    value = _break_long_words(value)
+    return value.encode("latin-1", "ignore").decode("latin-1")
+
+
+def _write_line(pdf, height, text):
+    """FPDF's multi_cell(0, ...) auto-extends the cell to the page's
+    right margin, then - by default - leaves the cursor sitting at that
+    right edge instead of resetting it to the left margin on a new line.
+    The next multi_cell() call then has zero horizontal room left and
+    crashes with "Not enough horizontal space to render a single
+    character". Forcing new_x/new_y here makes every line behave like
+    normal paragraph flow instead."""
+    pdf.multi_cell(0, height, _pdf_text(text), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 @recipes_bp.route("/recipes")
@@ -299,3 +369,67 @@ def delete_recipe(recipe_id):
 
     flash("Recipe deleted.", "success")
     return redirect(url_for("recipes.dashboard"))
+
+
+@recipes_bp.route("/recipes/<int:recipe_id>/download")
+def download_recipe_pdf(recipe_id):
+    recipe = get_recipe(recipe_id)
+    if recipe is None:
+        abort(404, description="That recipe could not be found.")
+
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 20)
+        _write_line(pdf, 10, recipe.title)
+
+        pdf.set_font("Helvetica", "", 11)
+        _write_line(
+            pdf,
+            6,
+            f"{recipe.cuisine} - {recipe.difficulty} - {recipe.minutes} min - Serves {recipe.servings}",
+        )
+        pdf.ln(4)
+        _write_line(pdf, 6, recipe.description)
+
+        pdf.ln(4)
+        pdf.set_font("Helvetica", "B", 13)
+        _write_line(pdf, 8, "Ingredients")
+        pdf.set_font("Helvetica", "", 11)
+        for line in recipe.ingredients.split("\n"):
+            line = line.strip()
+            if line:
+                _write_line(pdf, 6, f"- {line}")
+
+        pdf.ln(4)
+        pdf.set_font("Helvetica", "B", 13)
+        _write_line(pdf, 8, "Steps")
+        pdf.set_font("Helvetica", "", 11)
+        steps = [s.strip() for s in recipe.steps.split("\n") if s.strip()]
+        for i, step in enumerate(steps, start=1):
+            _write_line(pdf, 6, f"{i}. {step}")
+
+        if recipe.nutrition:
+            pdf.ln(4)
+            pdf.set_font("Helvetica", "B", 13)
+            _write_line(pdf, 8, "Nutrition")
+            pdf.set_font("Helvetica", "", 11)
+            _write_line(pdf, 6, recipe.nutrition)
+
+        buffer = BytesIO(pdf.output())
+        buffer.seek(0)
+    except Exception:
+        # Log the real exception to the terminal for debugging, but never
+        # show the visitor a raw 500 - send them back with a message
+        # instead, matching how every other write path in this app fails.
+        current_app.logger.exception("Failed to generate PDF for recipe %s", recipe_id)
+        flash("We could not generate that PDF. Please try again.", "error")
+        return redirect(url_for("recipes.recipe_detail", recipe_id=recipe_id))
+
+    safe_name = "".join(c for c in recipe.title if c.isalnum() or c in (" ", "-", "_")).strip() or "recipe"
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{safe_name}.pdf",
+    )
