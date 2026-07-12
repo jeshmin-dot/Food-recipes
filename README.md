@@ -18,9 +18,12 @@ here before submission]*
 - Recipe cards with a bookmark toggle, star rating badge, and calorie badge
 - Recipe detail pages with nutrition info, an interactive ingredient
   checklist, ratings, reviews, and related recipes
-- Download any recipe as a standalone PDF, or share its link (native share
-  sheet on mobile, copy-to-clipboard elsewhere)
-- User accounts: registration, secure login (hashed passwords), sessions
+- Download any recipe as a standalone PDF (requires being logged in), or
+  share its link (native share sheet on mobile, copy-to-clipboard
+  elsewhere - sharing itself doesn't require an account)
+- User accounts: registration (validated email format, passwords require 8+
+  characters and a special character), secure login (hashed passwords),
+  sessions
 - Add, edit, and delete your own recipes, with image upload or URL
 - Favorite recipes and leave star ratings + written reviews (one review per
   recipe - resubmitting updates it rather than stacking duplicates)
