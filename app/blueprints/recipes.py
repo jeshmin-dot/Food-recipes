@@ -383,6 +383,7 @@ def delete_recipe(recipe_id):
 
 
 @recipes_bp.route("/recipes/<int:recipe_id>/download")
+@login_required
 def download_recipe_pdf(recipe_id):
     recipe = get_recipe(recipe_id)
     if recipe is None:

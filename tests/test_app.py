@@ -41,7 +41,7 @@ def test_registration_creates_user():
     app, client = make_test_client()
     response = client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "ada@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "ada@example.com", "password": "secretpw!"}),
         follow_redirects=True,
     )
     assert response.status_code == 200
@@ -52,7 +52,7 @@ def test_registration_creates_user():
 
 def test_registration_duplicate_email_rejected():
     app, client = make_test_client()
-    data = {"name": "Ada", "email": "dupe@example.com", "password": "secretpw"}
+    data = {"name": "Ada", "email": "dupe@example.com", "password": "secretpw!"}
     client.post("/register", data=with_csrf(client, data))
     response = client.post("/register", data=with_csrf(client, data), follow_redirects=True)
     assert response.status_code == 200
@@ -65,12 +65,12 @@ def test_password_is_hashed_not_plaintext():
     app, client = make_test_client()
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "hash@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "hash@example.com", "password": "secretpw!"}),
     )
     with app.app_context():
         from app.models import User
         user = User.query.filter_by(email="hash@example.com").first()
-        assert user.password_hash != "secretpw"
+        assert user.password_hash != "secretpw!"
         assert user.password_hash.startswith(("pbkdf2:", "scrypt:"))
 
 
@@ -80,11 +80,11 @@ def test_login_success():
     app, client = make_test_client()
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "login@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "login@example.com", "password": "secretpw!"}),
     )
     response = client.post(
         "/login",
-        data=with_csrf(client, {"email": "login@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"email": "login@example.com", "password": "secretpw!"}),
         follow_redirects=True,
     )
     assert response.status_code == 200
@@ -96,7 +96,7 @@ def test_login_wrong_password_fails():
     app, client = make_test_client()
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "wrongpw@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "wrongpw@example.com", "password": "secretpw!"}),
     )
     client.post(
         "/login",
@@ -110,11 +110,11 @@ def test_logout_clears_session():
     app, client = make_test_client()
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "logout@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "logout@example.com", "password": "secretpw!"}),
     )
     client.post(
         "/login",
-        data=with_csrf(client, {"email": "logout@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"email": "logout@example.com", "password": "secretpw!"}),
     )
     client.get("/logout")
     with client.session_transaction() as sess:
@@ -126,9 +126,9 @@ def test_logout_clears_session():
 def _login_new_user(client, email="crud@example.com"):
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Cook", "email": email, "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Cook", "email": email, "password": "secretpw!"}),
     )
-    client.post("/login", data=with_csrf(client, {"email": email, "password": "secretpw"}))
+    client.post("/login", data=with_csrf(client, {"email": email, "password": "secretpw!"}))
 
 
 def _recipe_form(**overrides):
@@ -151,6 +151,26 @@ def test_dashboard_requires_login():
     app, client = make_test_client()
     response = client.get("/dashboard")
     assert response.status_code == 302
+
+
+def test_favoriting_requires_login():
+    app, client = make_test_client()
+    with app.app_context():
+        from app.models import Recipe
+        recipe_id = Recipe.query.first().id  # one of the seeded starter recipes
+    response = client.post(f"/recipes/{recipe_id}/favorite", data=with_csrf(client))
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_downloading_pdf_requires_login():
+    app, client = make_test_client()
+    with app.app_context():
+        from app.models import Recipe
+        recipe_id = Recipe.query.first().id  # one of the seeded starter recipes
+    response = client.get(f"/recipes/{recipe_id}/download")
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
 
 
 def test_add_recipe_creates_recipe():
@@ -283,11 +303,48 @@ def test_registration_rejects_short_password():
         assert User.query.filter_by(email="short@example.com").first() is None
 
 
+def test_registration_rejects_password_without_special_character():
+    # Long enough (8+ chars) but no special character - should still be
+    # rejected, since length alone isn't the whole policy.
+    app, client = make_test_client()
+    response = client.post(
+        "/register",
+        data=with_csrf(client, {"name": "Ada", "email": "nospecial@example.com", "password": "longenough"}),
+    )
+    assert response.status_code == 200  # re-renders the form, no redirect
+    with app.app_context():
+        from app.models import User
+        assert User.query.filter_by(email="nospecial@example.com").first() is None
+
+
+def test_registration_rejects_malformed_email():
+    app, client = make_test_client()
+    response = client.post(
+        "/register",
+        data=with_csrf(client, {"name": "Ada", "email": "not-an-email", "password": "secretpw!"}),
+    )
+    assert response.status_code == 200  # re-renders the form, no redirect
+    with app.app_context():
+        from app.models import User
+        assert User.query.filter_by(email="not-an-email").first() is None
+
+
+def test_registration_accepts_valid_strong_password():
+    app, client = make_test_client()
+    client.post(
+        "/register",
+        data=with_csrf(client, {"name": "Ada", "email": "strongpw@example.com", "password": "correcthorse!9"}),
+    )
+    with app.app_context():
+        from app.models import User
+        assert User.query.filter_by(email="strongpw@example.com").first() is not None
+
+
 def test_login_rate_limited_after_repeated_attempts():
     app, client = make_test_client()
     client.post(
         "/register",
-        data=with_csrf(client, {"name": "Ada", "email": "limited@example.com", "password": "secretpw"}),
+        data=with_csrf(client, {"name": "Ada", "email": "limited@example.com", "password": "secretpw!"}),
     )
     last_response = None
     for _ in range(10):

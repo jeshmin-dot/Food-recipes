@@ -340,6 +340,16 @@ label {
   gap: 14px;
 }
 
+/* The auth card (login/register/forgot-password) isn't inside a
+   .page-band, so without this its <h1> falls through to the global
+   hero-sized h1 rule meant for the homepage banner - which is what was
+   blowing up "Create Account" / "Login" to multiple lines of huge text. */
+.auth-card h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  line-height: 1.2;
+}
+
 .form-note {
   color: var(--muted);
 }
