@@ -816,6 +816,15 @@ textarea:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
+}
+
+/* The favorite button lives inside a <form>. As a plain block, the form
+   reserves inline line-spacing below the button, making its box taller
+   than the button itself - which pushed the button visually out of line
+   with its siblings. display:flex makes the form hug the button exactly. */
+.recipe-actions form {
+  display: flex;
 }
 
 /* Hover animations */
@@ -1006,4 +1015,11 @@ input, textarea, select {
 .ingredient-checklist li.checked span {
   text-decoration: line-through;
   color: var(--muted);
+}
+/* The favorite button lives inside a <form>, whose wrapper box was
+   knocking it out of line with its sibling buttons. display:contents
+   removes the form from layout entirely, so the button aligns as if it
+   were a direct child of the flex row. */
+.recipe-actions form {
+  display: contents;
 }
