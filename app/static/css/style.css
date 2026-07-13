@@ -1023,3 +1023,14 @@ input, textarea, select {
 .recipe-actions form {
   display: contents;
 }
+
+/* Same fix as the ingredient checklist: stop the global full-width input
+   rule from inflating the shopping list checkboxes. */
+.shopping-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  flex-shrink: 0;
+  padding: 0;
+  accent-color: var(--leaf);
+}
