@@ -1,6 +1,6 @@
 ﻿from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from app.models import Favorite
+from app.db import query_all
 from app.services import all_recipes
 
 main_bp = Blueprint("main", __name__)
@@ -14,7 +14,8 @@ def home():
     avg_minutes = round(sum(r.minutes for r in recipes) / len(recipes)) if recipes else 0
     favorite_ids = set()
     if session.get("user_id"):
-        favorite_ids = {f.recipe_id for f in Favorite.query.filter_by(user_id=session["user_id"]).all()}
+        rows = query_all("SELECT recipe_id FROM favorites WHERE user_id = %s", (session["user_id"],))
+        favorite_ids = {row["recipe_id"] for row in rows}
     return render_template(
         "home.html",
         recipes=recipes,

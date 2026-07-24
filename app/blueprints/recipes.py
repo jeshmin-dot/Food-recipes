@@ -2,6 +2,7 @@
 import re
 from io import BytesIO
 
+import pymysql
 from flask import (
     Blueprint,
     abort,
@@ -16,13 +17,12 @@ from flask import (
 )
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
-from sqlalchemy import or_
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import get_or_create_category
+from app.db import Row, execute, get_db, query_all, query_one
 from app.decorators import login_required
-from app.models import Category, Favorite, Recipe, Review, db
 from app.services import (
+    RECIPE_SELECT,
     all_recipes,
     delete_uploaded_image,
     get_recipe,
@@ -90,9 +90,8 @@ def _write_line(pdf, height, text):
 
 @recipes_bp.route("/recipes")
 def recipes():
-    # Query-level filtering: every filter below is applied as a SQL WHERE
-    # clause (via SQLAlchemy), rather than fetching every row and
-    # filtering with Python list comprehensions.
+    # Every filter below is built as a SQL WHERE clause with the value passed
+    # as a parameter, rather than fetching every row and filtering in Python.
     query = request.args.get("q", "").strip().lower()
     cuisine = request.args.get("cuisine", "").strip()
     difficulty = request.args.get("difficulty", "").strip()
@@ -101,52 +100,60 @@ def recipes():
     calorie_bucket = request.args.get("calories", "").strip()
     sort = request.args.get("sort", "newest").strip()
 
-    recipe_query = Recipe.query.join(Category)
+    clauses = []
+    params = []
 
     if query:
-        pattern = f"%{query}%"
-        recipe_query = recipe_query.filter(
-            or_(
-                Recipe.title.ilike(pattern),
-                Category.name.ilike(pattern),
-                Recipe.ingredients.ilike(pattern),
-            )
-        )
+        like = f"%{query}%"
+        clauses.append("(LOWER(r.title) LIKE %s OR LOWER(c.name) LIKE %s OR LOWER(r.ingredients) LIKE %s)")
+        params += [like, like, like]
     if cuisine:
-        recipe_query = recipe_query.filter(Category.name == cuisine)
+        clauses.append("c.name = %s")
+        params.append(cuisine)
     if difficulty:
-        recipe_query = recipe_query.filter(Recipe.difficulty == difficulty)
+        clauses.append("r.difficulty = %s")
+        params.append(difficulty)
     if ingredient:
-        recipe_query = recipe_query.filter(Recipe.ingredients.ilike(f"%{ingredient}%"))
+        clauses.append("LOWER(r.ingredients) LIKE %s")
+        params.append(f"%{ingredient}%")
+
     if time_bucket == "under20":
-        recipe_query = recipe_query.filter(Recipe.minutes < 20)
+        clauses.append("r.minutes < 20")
     elif time_bucket == "20to40":
-        recipe_query = recipe_query.filter(Recipe.minutes.between(20, 40))
+        clauses.append("r.minutes BETWEEN 20 AND 40")
     elif time_bucket == "over40":
-        recipe_query = recipe_query.filter(Recipe.minutes > 40)
+        clauses.append("r.minutes > 40")
 
     if calorie_bucket == "under300":
-        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories < 300)
+        clauses.append("r.calories IS NOT NULL AND r.calories < 300")
     elif calorie_bucket == "300to600":
-        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories.between(300, 600))
+        clauses.append("r.calories IS NOT NULL AND r.calories BETWEEN 300 AND 600")
     elif calorie_bucket == "over600":
-        recipe_query = recipe_query.filter(Recipe.calories.isnot(None), Recipe.calories > 600)
+        clauses.append("r.calories IS NOT NULL AND r.calories > 600")
+
+    sql = RECIPE_SELECT
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
 
     if sort == "quickest":
-        recipe_query = recipe_query.order_by(Recipe.minutes.asc())
+        sql += " ORDER BY r.minutes ASC"
     elif sort == "az":
-        recipe_query = recipe_query.order_by(Recipe.title.asc())
+        sql += " ORDER BY r.title ASC"
     else:
-        recipe_query = recipe_query.order_by(Recipe.created_at.desc())
+        sql += " ORDER BY r.created_at DESC"
 
-    recipe_list = recipe_query.all()
+    recipe_list = query_all(sql, params)
 
-    all_cuisines = sorted({recipe.cuisine for recipe in all_recipes()})
+    cuisine_rows = query_all(
+        "SELECT DISTINCT c.name FROM categories c JOIN recipes r ON r.category_id = c.id ORDER BY c.name"
+    )
+    all_cuisines = [row["name"] for row in cuisine_rows]
     all_difficulties = ["Easy", "Medium", "Project"]
 
     favorite_ids = set()
     if session.get("user_id"):
-        favorite_ids = {f.recipe_id for f in Favorite.query.filter_by(user_id=session["user_id"]).all()}
+        rows = query_all("SELECT recipe_id FROM favorites WHERE user_id = %s", (session["user_id"],))
+        favorite_ids = {row["recipe_id"] for row in rows}
 
     return render_template(
         "recipes.html",
@@ -179,16 +186,32 @@ def recipe_detail(recipe_id):
     recipe = get_recipe(recipe_id)
     if recipe is None:
         abort(404, description="That recipe could not be found.")
+
     is_favorited = False
     if session.get("user_id"):
-        is_favorited = Favorite.query.filter_by(
-            user_id=session["user_id"], recipe_id=recipe.id
-        ).first() is not None
-    reviews = Review.query.filter_by(recipe_id=recipe.id).order_by(Review.created_at.desc()).all()
-    related = (
-        Recipe.query.filter(Recipe.category_id == recipe.category_id, Recipe.id != recipe.id)
-        .limit(3)
-        .all()
+        is_favorited = query_one(
+            "SELECT id FROM favorites WHERE user_id = %s AND recipe_id = %s",
+            (session["user_id"], recipe.id),
+        ) is not None
+
+    reviews = query_all(
+        """
+        SELECT rv.id, rv.rating, rv.comment, rv.created_at, u.name AS user_name
+        FROM reviews rv
+        JOIN users u ON u.id = rv.user_id
+        WHERE rv.recipe_id = %s
+        ORDER BY rv.created_at DESC
+        """,
+        (recipe.id,),
+    )
+    for review in reviews:
+        review["user"] = Row(name=review["user_name"])
+    # The detail template shows the review count via recipe.reviews|length.
+    recipe["reviews"] = reviews
+
+    related = query_all(
+        RECIPE_SELECT + " WHERE r.category_id = %s AND r.id <> %s LIMIT 3",
+        (recipe.category_id, recipe.id),
     )
     return render_template(
         "recipe_detail.html", recipe=recipe, is_favorited=is_favorited, reviews=reviews, related=related
@@ -203,17 +226,22 @@ def toggle_favorite(recipe_id):
         flash("That recipe no longer exists.", "error")
         return redirect(url_for("recipes.recipes"))
 
-    existing = Favorite.query.filter_by(user_id=session["user_id"], recipe_id=recipe_id).first()
+    existing = query_one(
+        "SELECT id FROM favorites WHERE user_id = %s AND recipe_id = %s",
+        (session["user_id"], recipe_id),
+    )
     try:
         if existing:
-            db.session.delete(existing)
+            execute("DELETE FROM favorites WHERE id = %s", (existing.id,))
             flash("Removed from favorites.", "success")
         else:
-            db.session.add(Favorite(user_id=session["user_id"], recipe_id=recipe_id))
+            execute(
+                "INSERT INTO favorites (user_id, recipe_id) VALUES (%s, %s)",
+                (session["user_id"], recipe_id),
+            )
             flash("Added to favorites.", "success")
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+    except pymysql.MySQLError:
+        get_db().rollback()
         flash("We could not update your favorites. Please try again.", "error")
 
     return redirect(url_for("recipes.recipe_detail", recipe_id=recipe_id))
@@ -239,22 +267,26 @@ def add_review(recipe_id):
     comment = request.form.get("comment", "").strip() or None
 
     try:
-        # One review per user per recipe: update the existing one (so
-        # ratings can't be stuffed by resubmitting the form) instead of
-        # always inserting a new row.
-        existing = Review.query.filter_by(user_id=session["user_id"], recipe_id=recipe_id).first()
+        # One review per user per recipe: update the existing one (so ratings
+        # can't be stuffed by resubmitting the form) instead of inserting.
+        existing = query_one(
+            "SELECT id FROM reviews WHERE user_id = %s AND recipe_id = %s",
+            (session["user_id"], recipe_id),
+        )
         if existing:
-            existing.rating = rating
-            existing.comment = comment
+            execute(
+                "UPDATE reviews SET rating = %s, comment = %s WHERE id = %s",
+                (rating, comment, existing.id),
+            )
             flash("Your review was updated.", "success")
         else:
-            db.session.add(
-                Review(user_id=session["user_id"], recipe_id=recipe_id, rating=rating, comment=comment)
+            execute(
+                "INSERT INTO reviews (user_id, recipe_id, rating, comment) VALUES (%s, %s, %s, %s)",
+                (session["user_id"], recipe_id, rating, comment),
             )
             flash("Thanks for your review!", "success")
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+    except pymysql.MySQLError:
+        get_db().rollback()
         flash("We could not save your review. Please try again.", "error")
 
     return redirect(url_for("recipes.recipe_detail", recipe_id=recipe_id))
@@ -272,34 +304,46 @@ def dashboard():
             return redirect(url_for("recipes.dashboard"))
 
         try:
-            category = get_or_create_category(request.form["cuisine"].strip())
-            recipe = Recipe(
-                title=request.form["title"],
-                description=request.form["description"],
-                category_id=category.id,
-                difficulty=request.form["difficulty"],
-                minutes=minutes,
-                servings=servings,
-                image_url=image_url,
-                ingredients=request.form["ingredients"],
-                steps=request.form["steps"],
-                nutrition=request.form.get("nutrition", "").strip() or None,
-                calories=calories,
-                owner_id=session["user_id"],
+            category_id = get_or_create_category(request.form["cuisine"].strip())
+            execute(
+                """
+                INSERT INTO recipes
+                    (title, description, category_id, difficulty, minutes, servings,
+                     image_url, ingredients, steps, nutrition, calories, owner_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    request.form["title"],
+                    request.form["description"],
+                    category_id,
+                    request.form["difficulty"],
+                    minutes,
+                    servings,
+                    image_url,
+                    request.form["ingredients"],
+                    request.form["steps"],
+                    request.form.get("nutrition", "").strip() or None,
+                    calories,
+                    session["user_id"],
+                ),
             )
-            db.session.add(recipe)
-            db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
+        except pymysql.MySQLError:
+            get_db().rollback()
             flash("We could not save that recipe. Please try again.", "error")
             return redirect(url_for("recipes.dashboard"))
 
         flash("Recipe added to the garden.", "success")
         return redirect(url_for("recipes.dashboard"))
 
-    user_recipe_count = Recipe.query.filter_by(owner_id=session["user_id"]).count()
-    user_favorite_count = Favorite.query.filter_by(user_id=session["user_id"]).count()
-    user_review_count = Review.query.filter_by(user_id=session["user_id"]).count()
+    user_recipe_count = query_one(
+        "SELECT COUNT(*) AS total FROM recipes WHERE owner_id = %s", (session["user_id"],)
+    )["total"]
+    user_favorite_count = query_one(
+        "SELECT COUNT(*) AS total FROM favorites WHERE user_id = %s", (session["user_id"],)
+    )["total"]
+    user_review_count = query_one(
+        "SELECT COUNT(*) AS total FROM reviews WHERE user_id = %s", (session["user_id"],)
+    )["total"]
     return render_template(
         "dashboard.html",
         recipes=all_recipes(),
@@ -328,23 +372,34 @@ def edit_recipe(recipe_id):
             return redirect(url_for("recipes.edit_recipe", recipe_id=recipe_id))
 
         old_image_url = recipe.image_url
+        image_url = new_image or old_image_url
         try:
-            category = get_or_create_category(request.form["cuisine"].strip())
-            recipe.title = request.form["title"]
-            recipe.description = request.form["description"]
-            recipe.category_id = category.id
-            recipe.difficulty = request.form["difficulty"]
-            recipe.minutes = minutes
-            recipe.servings = servings
-            if new_image:
-                recipe.image_url = new_image
-            recipe.ingredients = request.form["ingredients"]
-            recipe.steps = request.form["steps"]
-            recipe.nutrition = request.form.get("nutrition", "").strip() or None
-            recipe.calories = calories
-            db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
+            category_id = get_or_create_category(request.form["cuisine"].strip())
+            execute(
+                """
+                UPDATE recipes SET
+                    title = %s, description = %s, category_id = %s, difficulty = %s,
+                    minutes = %s, servings = %s, image_url = %s, ingredients = %s,
+                    steps = %s, nutrition = %s, calories = %s
+                WHERE id = %s
+                """,
+                (
+                    request.form["title"],
+                    request.form["description"],
+                    category_id,
+                    request.form["difficulty"],
+                    minutes,
+                    servings,
+                    image_url,
+                    request.form["ingredients"],
+                    request.form["steps"],
+                    request.form.get("nutrition", "").strip() or None,
+                    calories,
+                    recipe_id,
+                ),
+            )
+        except pymysql.MySQLError:
+            get_db().rollback()
             flash("We could not update that recipe. Please try again.", "error")
             return redirect(url_for("recipes.edit_recipe", recipe_id=recipe_id))
 
@@ -369,10 +424,13 @@ def delete_recipe(recipe_id):
 
     image_url = recipe.image_url
     try:
-        db.session.delete(recipe)
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+        # Remove the rows that reference this recipe first, then the recipe.
+        execute("DELETE FROM favorites WHERE recipe_id = %s", (recipe_id,))
+        execute("DELETE FROM reviews WHERE recipe_id = %s", (recipe_id,))
+        execute("DELETE FROM meal_plan_entries WHERE recipe_id = %s", (recipe_id,))
+        execute("DELETE FROM recipes WHERE id = %s", (recipe_id,))
+    except pymysql.MySQLError:
+        get_db().rollback()
         flash("We could not delete that recipe. Please try again.", "error")
         return redirect(url_for("recipes.dashboard"))
 
@@ -431,9 +489,6 @@ def download_recipe_pdf(recipe_id):
         buffer = BytesIO(pdf.output())
         buffer.seek(0)
     except Exception:
-        # Log the real exception to the terminal for debugging, but never
-        # show the visitor a raw 500 - send them back with a message
-        # instead, matching how every other write path in this app fails.
         current_app.logger.exception("Failed to generate PDF for recipe %s", recipe_id)
         flash("We could not generate that PDF. Please try again.", "error")
         return redirect(url_for("recipes.recipe_detail", recipe_id=recipe_id))

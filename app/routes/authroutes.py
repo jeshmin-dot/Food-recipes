@@ -1,12 +1,12 @@
 ﻿import re
 import string
 
+import pymysql
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
-from sqlalchemy.exc import IntegrityError
 
 from app.controllers.authcontroller import create_user, verify_user
+from app.db import get_db
 from app.decorators import rate_limit
-from app.models import db
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -64,12 +64,9 @@ def register():
             create_user(request.form["name"], email, password)
             flash("Account created. You can log in now.", "success")
             return redirect(url_for("auth.login"))
-        except IntegrityError:
-            db.session.rollback()
+        except pymysql.err.IntegrityError:
+            get_db().rollback()
             flash("That email is already registered.", "error")
-        except ValueError as exc:
-            db.session.rollback()
-            flash(str(exc), "error")
     return render_template("register.html")
 
 
