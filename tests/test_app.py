@@ -1,21 +1,20 @@
-﻿import io
-import os
+﻿"""Automated tests for the Recipe Garden application.
+
+The suite runs against a throwaway in-memory SQLite database (see
+conftest.py) so `pytest` works on any machine without a MySQL server. Every
+database check below is written as raw parameterised SQL through app/db.py -
+the same data layer the application itself uses - so the tests exercise the
+real query path rather than an ORM stand-in.
+"""
+
+import io
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def make_test_client():
-    # The app talks to MySQL in development/production (see config.py), but
-    # the test suite points DATABASE_URL at a throwaway SQLite file instead
-    # so `pytest` can run anywhere - CI, a laptop, this sandbox - without a
-    # MySQL server. See REPORT.md's "Testing" section for the reasoning.
-    tmp_dir = tempfile.mkdtemp()
-    db_path = os.path.join(tmp_dir, "test.db")
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
     from app import create_app
     from app.decorators import _reset_rate_limits
 
@@ -35,6 +34,35 @@ def with_csrf(client, data=None):
     return form
 
 
+# Small raw-SQL helpers so the assertions stay readable. Each opens an app
+# context and runs a parameterised query through the application's own db
+# layer (app/db.py), exactly as the views do.
+
+def _query_one(app, sql, params=()):
+    with app.app_context():
+        from app.db import query_one
+        return query_one(sql, params)
+
+
+def _query_all(app, sql, params=()):
+    with app.app_context():
+        from app.db import query_all
+        return query_all(sql, params)
+
+
+def _scalar(app, sql, params=()):
+    row = _query_one(app, sql, params)
+    if row is None:
+        return None
+    # Return the single selected value regardless of its column name.
+    return next(iter(row.values()))
+
+
+def _first_recipe_id(app):
+    row = _query_one(app, "SELECT id FROM recipes ORDER BY id LIMIT 1")
+    return row["id"]
+
+
 # ---------- Registration ----------
 
 def test_registration_creates_user():
@@ -45,9 +73,7 @@ def test_registration_creates_user():
         follow_redirects=True,
     )
     assert response.status_code == 200
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="ada@example.com").first() is not None
+    assert _query_one(app, "SELECT id FROM users WHERE email = %s", ("ada@example.com",)) is not None
 
 
 def test_registration_duplicate_email_rejected():
@@ -56,9 +82,7 @@ def test_registration_duplicate_email_rejected():
     client.post("/register", data=with_csrf(client, data))
     response = client.post("/register", data=with_csrf(client, data), follow_redirects=True)
     assert response.status_code == 200
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="dupe@example.com").count() == 1
+    assert _scalar(app, "SELECT COUNT(*) FROM users WHERE email = %s", ("dupe@example.com",)) == 1
 
 
 def test_password_is_hashed_not_plaintext():
@@ -67,11 +91,9 @@ def test_password_is_hashed_not_plaintext():
         "/register",
         data=with_csrf(client, {"name": "Ada", "email": "hash@example.com", "password": "secretpw!"}),
     )
-    with app.app_context():
-        from app.models import User
-        user = User.query.filter_by(email="hash@example.com").first()
-        assert user.password_hash != "secretpw!"
-        assert user.password_hash.startswith(("pbkdf2:", "scrypt:"))
+    user = _query_one(app, "SELECT password_hash FROM users WHERE email = %s", ("hash@example.com",))
+    assert user["password_hash"] != "secretpw!"
+    assert user["password_hash"].startswith(("pbkdf2:", "scrypt:"))
 
 
 # ---------- Login / logout ----------
@@ -155,9 +177,7 @@ def test_dashboard_requires_login():
 
 def test_favoriting_requires_login():
     app, client = make_test_client()
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.first().id  # one of the seeded starter recipes
+    recipe_id = _first_recipe_id(app)  # one of the seeded starter recipes
     response = client.post(f"/recipes/{recipe_id}/favorite", data=with_csrf(client))
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
@@ -165,9 +185,7 @@ def test_favoriting_requires_login():
 
 def test_downloading_pdf_requires_login():
     app, client = make_test_client()
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.first().id  # one of the seeded starter recipes
+    recipe_id = _first_recipe_id(app)  # one of the seeded starter recipes
     response = client.get(f"/recipes/{recipe_id}/download")
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
@@ -177,31 +195,24 @@ def test_add_recipe_creates_recipe():
     app, client = make_test_client()
     _login_new_user(client)
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        assert Recipe.query.filter_by(title="Test Soup").first() is not None
+    assert _query_one(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",)) is not None
 
 
 def test_edit_recipe_updates_fields():
     app, client = make_test_client()
     _login_new_user(client)
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",))
     client.post(f"/recipes/{recipe_id}/edit", data=with_csrf(client, _recipe_form(title="Updated Soup")))
-    with app.app_context():
-        from app.models import Recipe, db
-        assert db.session.get(Recipe, recipe_id).title == "Updated Soup"
+    title = _scalar(app, "SELECT title FROM recipes WHERE id = %s", (recipe_id,))
+    assert title == "Updated Soup"
 
 
 def test_non_owner_cannot_edit_recipe():
     app, client = make_test_client()
     _login_new_user(client, email="owner@example.com")
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",))
 
     client.get("/logout")
     _login_new_user(client, email="intruder@example.com")
@@ -213,13 +224,9 @@ def test_delete_recipe_removes_it():
     app, client = make_test_client()
     _login_new_user(client)
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",))
     client.post(f"/recipes/{recipe_id}/delete", data=with_csrf(client))
-    with app.app_context():
-        from app.models import Recipe, db
-        assert db.session.get(Recipe, recipe_id) is None
+    assert _query_one(app, "SELECT id FROM recipes WHERE id = %s", (recipe_id,)) is None
 
 
 # ---------- Search ----------
@@ -298,9 +305,7 @@ def test_registration_rejects_short_password():
         data=with_csrf(client, {"name": "Ada", "email": "short@example.com", "password": "abc"}),
     )
     assert response.status_code == 200  # re-renders the form, no redirect
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="short@example.com").first() is None
+    assert _query_one(app, "SELECT id FROM users WHERE email = %s", ("short@example.com",)) is None
 
 
 def test_registration_rejects_password_without_special_character():
@@ -312,9 +317,7 @@ def test_registration_rejects_password_without_special_character():
         data=with_csrf(client, {"name": "Ada", "email": "nospecial@example.com", "password": "longenough"}),
     )
     assert response.status_code == 200  # re-renders the form, no redirect
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="nospecial@example.com").first() is None
+    assert _query_one(app, "SELECT id FROM users WHERE email = %s", ("nospecial@example.com",)) is None
 
 
 def test_registration_rejects_malformed_email():
@@ -324,9 +327,7 @@ def test_registration_rejects_malformed_email():
         data=with_csrf(client, {"name": "Ada", "email": "not-an-email", "password": "secretpw!"}),
     )
     assert response.status_code == 200  # re-renders the form, no redirect
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="not-an-email").first() is None
+    assert _query_one(app, "SELECT id FROM users WHERE email = %s", ("not-an-email",)) is None
 
 
 def test_registration_accepts_valid_strong_password():
@@ -335,9 +336,7 @@ def test_registration_accepts_valid_strong_password():
         "/register",
         data=with_csrf(client, {"name": "Ada", "email": "strongpw@example.com", "password": "correcthorse!9"}),
     )
-    with app.app_context():
-        from app.models import User
-        assert User.query.filter_by(email="strongpw@example.com").first() is not None
+    assert _query_one(app, "SELECT id FROM users WHERE email = %s", ("strongpw@example.com",)) is not None
 
 
 def test_login_rate_limited_after_repeated_attempts():
@@ -361,19 +360,15 @@ def test_resubmitting_review_updates_instead_of_duplicating():
     app, client = make_test_client()
     _login_new_user(client, email="reviewer@example.com")
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",))
 
     client.post(f"/recipes/{recipe_id}/review", data=with_csrf(client, {"rating": "3", "comment": "Okay"}))
     client.post(f"/recipes/{recipe_id}/review", data=with_csrf(client, {"rating": "5", "comment": "Great!"}))
 
-    with app.app_context():
-        from app.models import Review
-        reviews = Review.query.filter_by(recipe_id=recipe_id).all()
-        assert len(reviews) == 1
-        assert reviews[0].rating == 5
-        assert reviews[0].comment == "Great!"
+    reviews = _query_all(app, "SELECT rating, comment FROM reviews WHERE recipe_id = %s", (recipe_id,))
+    assert len(reviews) == 1
+    assert reviews[0]["rating"] == 5
+    assert reviews[0]["comment"] == "Great!"
 
 
 # ---------- Uploaded file cleanup ----------
@@ -386,28 +381,26 @@ def test_deleting_recipe_removes_its_uploaded_image(tmp_path, monkeypatch):
     image_path.write_bytes(b"fake image bytes")
 
     _login_new_user(client, email="cleanup@example.com")
-    with app.app_context():
-        from app.models import Recipe, db
-        from app.database import get_or_create_category
+    with client.session_transaction() as sess:
+        user_id = sess["user_id"]
 
-        category = get_or_create_category("Testland")
-        with client.session_transaction() as sess:
-            user_id = sess["user_id"]
-        recipe = Recipe(
-            title="Cleanup Soup",
-            description="desc",
-            category_id=category.id,
-            difficulty="Easy",
-            minutes=10,
-            servings=1,
-            image_url="/static/uploads/orphan-test.jpg",
-            ingredients="water",
-            steps="Boil.",
-            owner_id=user_id,
+    with app.app_context():
+        from app.database import get_or_create_category
+        from app.db import execute
+
+        category_id = get_or_create_category("Testland")
+        recipe_id = execute(
+            """
+            INSERT INTO recipes
+                (title, description, category_id, difficulty, minutes, servings,
+                 image_url, ingredients, steps, owner_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                "Cleanup Soup", "desc", category_id, "Easy", 10, 1,
+                "/static/uploads/orphan-test.jpg", "water", "Boil.", user_id,
+            ),
         )
-        db.session.add(recipe)
-        db.session.commit()
-        recipe_id = recipe.id
 
     client.post(f"/recipes/{recipe_id}/delete", data=with_csrf(client))
     assert not image_path.exists()
@@ -419,10 +412,8 @@ def test_add_recipe_with_calories_saves_value():
     app, client = make_test_client()
     _login_new_user(client)
     client.post("/dashboard", data=with_csrf(client, _recipe_form(calories="410")))
-    with app.app_context():
-        from app.models import Recipe
-        recipe = Recipe.query.filter_by(title="Test Soup").first()
-        assert recipe.calories == 410
+    calories = _scalar(app, "SELECT calories FROM recipes WHERE title = %s", ("Test Soup",))
+    assert calories == 410
 
 
 def test_add_recipe_without_calories_still_works():
@@ -431,19 +422,16 @@ def test_add_recipe_without_calories_still_works():
     app, client = make_test_client()
     _login_new_user(client, email="nocal@example.com")
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe = Recipe.query.filter_by(title="Test Soup").first()
-        assert recipe.calories is None
+    recipe = _query_one(app, "SELECT calories FROM recipes WHERE title = %s", ("Test Soup",))
+    assert recipe is not None
+    assert recipe["calories"] is None
 
 
 def test_add_recipe_rejects_negative_calories():
     app, client = make_test_client()
     _login_new_user(client, email="negcal@example.com")
     client.post("/dashboard", data=with_csrf(client, _recipe_form(title="Bad Cal Soup", calories="-5")))
-    with app.app_context():
-        from app.models import Recipe
-        assert Recipe.query.filter_by(title="Bad Cal Soup").first() is None
+    assert _query_one(app, "SELECT id FROM recipes WHERE title = %s", ("Bad Cal Soup",)) is None
 
 
 def test_calorie_filter_narrows_results():
@@ -459,7 +447,7 @@ def test_calorie_filter_narrows_results():
 
 
 # ---------- PDF download ----------
-# These two were the exact gap that let a real crash reach the browser
+# These two cover the exact gap that let a real crash reach the browser
 # before it was caught by anything automated - see _break_long_words()
 # and _write_line() in app/blueprints/recipes.py for the fixes they cover.
 
@@ -467,9 +455,7 @@ def test_download_recipe_pdf_returns_pdf():
     app, client = make_test_client()
     _login_new_user(client)
     client.post("/dashboard", data=with_csrf(client, _recipe_form()))
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Test Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Test Soup",))
 
     response = client.get(f"/recipes/{recipe_id}/download")
     assert response.status_code == 200
@@ -488,9 +474,7 @@ def test_download_recipe_pdf_handles_long_unbroken_field():
         "/dashboard",
         data=with_csrf(client, _recipe_form(title="Long Word Soup", cuisine="a" * 200)),
     )
-    with app.app_context():
-        from app.models import Recipe
-        recipe_id = Recipe.query.filter_by(title="Long Word Soup").first().id
+    recipe_id = _scalar(app, "SELECT id FROM recipes WHERE title = %s", ("Long Word Soup",))
 
     response = client.get(f"/recipes/{recipe_id}/download")
     assert response.status_code == 200
